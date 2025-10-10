@@ -8,7 +8,8 @@ Classroomly is a web-based platform that simplifies the tutoring process by enab
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **Database & Auth**: Supabase
-- **Video Calling**: video.co
+- **Video Calling**: Daily.co
+- **Email**: Resend
 - **Deployment**: Vercel
 - **State Management**: Zustand
 - **Form Handling**: React Hook Form + Zod
@@ -105,11 +106,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - [ ] Email notifications
 - [ ] Booking conflict prevention
 
-### Sprint 4: Virtual Classroom Foundation (Weeks 7-8)
-- [ ] video.co integration
-- [ ] Classroom interface
-- [ ] Screen sharing
-- [ ] Session controls
+### Sprint 4: Virtual Classroom Foundation (Weeks 7-8) ✅
+- [x] Daily.co integration
+- [x] Classroom interface
+- [x] Video calling with controls
+- [x] Screen sharing
+- [x] Session controls (mute, video, leave)
 
 ### Sprint 5: Chat & File Sharing (Weeks 9-10)
 - [ ] Real-time chat with Supabase
@@ -165,20 +167,23 @@ npm run db:reset     # Reset database
 |----------|-------------|----------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | Yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Yes |
-| `NEXT_PUBLIC_VIDEO_CO_API_KEY` | video.co API key | Yes |
-| `VIDEO_CO_SECRET_KEY` | video.co secret key | Yes |
+| `DAILY_API_KEY` | Daily.co API key | Yes (Sprint 4) |
+| `NEXT_PUBLIC_DAILY_DOMAIN` | Daily.co domain | Yes (Sprint 4) |
+| `RESEND_API_KEY` | Resend API key for emails | Optional (Sprint 3) |
+| `FROM_EMAIL` | Sender email address | Optional (Sprint 3) |
 | `NEXT_PUBLIC_APP_URL` | Application URL | Yes |
 
 ## 📚 Key Dependencies
 
 - **Next.js 14**: React framework with App Router
 - **Supabase**: Backend-as-a-Service (database, auth, storage)
-- **video.co**: Video calling infrastructure
+- **Daily.co**: Professional video calling infrastructure
+- **Resend**: Email service for notifications
 - **Tailwind CSS**: Utility-first CSS framework
 - **Zustand**: Lightweight state management
 - **React Hook Form**: Form handling
 - **Zod**: Schema validation
-- **date-fns**: Date utility library
+- **ICS**: Calendar file generation
 
 ## 🚀 Deployment
 
@@ -209,5 +214,5 @@ For questions or support, contact: support@classroomly.com
 
 ---
 
-**Built with ❤️ using Next.js 14, Supabase, and video.co**
+**Built with ❤️ using Next.js 14, Supabase, Daily.co, and Resend**
 
