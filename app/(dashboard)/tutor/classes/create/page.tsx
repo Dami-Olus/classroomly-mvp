@@ -82,13 +82,12 @@ export default function CreateClassPage() {
       // Generate unique booking link
       const bookingLink = generateBookingLink()
 
-      // Generate specific time slots from tutor's availability ranges
-      const specificSlots = generateTimeSlotsFromRanges(
-        tutorAvailability,
-        formData.duration
-      )
+      // NOTE: We no longer store available_slots in the class
+      // Instead, availability is read directly from the tutor's global availability
+      // This ensures all classes share the same availability pool
+      console.log('🌍 GLOBAL AVAILABILITY: Class will reference tutor availability directly')
 
-      // Create class (with generated slots)
+      // Create class (without available_slots - uses tutor's global availability)
       const { data: classData, error } = await supabase
         .from('classes')
         .insert({
@@ -101,7 +100,7 @@ export default function CreateClassPage() {
           price_per_session: formData.pricePerSession
             ? parseFloat(formData.pricePerSession)
             : null,
-          available_slots: specificSlots, // Generated slots from ranges
+          // available_slots removed - now uses tutor's global availability
           booking_link: bookingLink,
           max_students: formData.maxStudents,
         })

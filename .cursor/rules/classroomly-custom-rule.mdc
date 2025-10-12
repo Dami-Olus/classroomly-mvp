@@ -1,3 +1,732 @@
 ---
 alwaysApply: true
 ---
+# ClassroomLY - Cursor AI Rules
+
+## Project Overview
+ClassroomLY is a modern, all-in-one platform for independent tutors to manage students, bookings, video sessions, and payments. Built for global use with primary focus on Nigeria and Canada.
+
+### Target Users
+- Independent tutors (1-15 students)
+- Premium tutors charging $30-100/hour equivalent
+- Primary markets: Nigeria, Canada, Kenya
+- Secondary markets: UK, US, Global
+
+### Core Value Proposition
+Replace fragmented workflow (WhatsApp + Zoom + Calendly + spreadsheets) with one integrated platform.
+
+---
+
+## Tech Stack
+
+### Frontend
+- **Framework**: Next.js 14+ (App Router)
+- **Language**: TypeScript (strict mode)
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **State Management**: React hooks (useState, useContext), React Query for server state
+- **Forms**: React Hook Form + Zod validation
+- **Icons**: Lucide React
+
+### Backend
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth (email/password, OAuth)
+- **Storage**: Supabase Storage (for files, recordings)
+- **API**: Next.js API routes (App Router)
+
+### Key Integrations
+- **Video**: Daily.co (for video classroom)
+- **Payments**: 
+  - Stripe (Canada, US, UK, global)
+  - Paystack (Nigeria, Kenya, Ghana)
+- **SMS**: Twilio (global), Termii (Nigeria)
+- **Email**: Resend
+- **Analytics**: Plausible or PostHog
+
+### Deployment
+- **Hosting**: Vercel
+- **Database**: Supabase Cloud
+- **CDN**: Vercel Edge Network
+
+---
+
+## Code Style & Conventions
+
+### General Principles
+1. **Keep it simple** - Favor readability over cleverness
+2. **Mobile-first** - Design for mobile, enhance for desktop
+3. **Progressive enhancement** - Core features work without JS
+4. **Accessibility** - WCAG 2.1 AA compliance minimum
+5. **Performance** - Target <3s initial load, <1s navigation
+
+### TypeScript
+- Use `interface` for object types, `type` for unions/intersections
+- Avoid `any` - use `unknown` or proper types
+- Enable strict mode
+- Use type inference where obvious
+- Export types alongside components
+
+```typescript
+// Good
+interface Student {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: Date;
+}
+
+// Bad
+type Student = {
+  id: any;
+  name: string;
+};
+```
+
+### React Components
+- Use functional components with hooks (no class components)
+- Co-locate related code (component + styles + types in same file or folder)
+- Use `"use client"` directive only when necessary (prefer server components)
+- Extract reusable logic into custom hooks
+
+```typescript
+// File structure
+/components
+  /BookingLink
+    BookingLink.tsx
+    BookingLink.test.tsx
+    types.ts
+    hooks.ts
+```
+
+### Component Naming
+- PascalCase for components: `StudentCard`, `BookingCalendar`
+- camelCase for functions/variables: `getStudent`, `isActive`
+- SCREAMING_SNAKE_CASE for constants: `MAX_STUDENTS`, `API_BASE_URL`
+- Prefix custom hooks with `use`: `useStudent`, `useBooking`
+- Prefix event handlers with `handle`: `handleSubmit`, `handleClick`
+
+### File Organization
+```
+/app
+  /(auth)
+    /login
+    /signup
+  /(dashboard)
+    /students
+    /sessions
+    /settings
+  /api
+    /students
+    /bookings
+/components
+  /ui (shadcn components)
+  /features (feature-specific components)
+  /layouts
+/lib
+  /api (API client functions)
+  /hooks (custom hooks)
+  /utils (utility functions)
+  /types (shared types)
+  /validations (Zod schemas)
+/config
+  constants.ts
+  env.ts
+```
+
+---
+
+## Database Schema Guidelines
+
+### Naming Conventions
+- Tables: snake_case, plural: `students`, `booking_sessions`, `payment_methods`
+- Columns: snake_case: `created_at`, `student_id`, `is_active`
+- Foreign keys: `{table}_id`: `student_id`, `tutor_id`
+- Timestamps: Always include `created_at`, `updated_at`
+
+### Common Patterns
+```sql
+-- Standard timestamp pattern
+created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+
+-- Soft delete pattern
+deleted_at TIMESTAMP WITH TIME ZONE
+
+-- User reference
+user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
+```
+
+### Row Level Security (RLS)
+- Always enable RLS on tables with user data
+- Tutors can only access their own data
+- Students can only access their own bookings
+
+---
+
+## API Design
+
+### Route Naming
+- RESTful conventions
+- Use plural nouns: `/api/students`, `/api/bookings`
+- Use HTTP methods correctly: GET (read), POST (create), PATCH (update), DELETE (delete)
+
+### Response Format
+```typescript
+// Success response
+{
+  data: T,
+  message?: string
+}
+
+// Error response
+{
+  error: {
+    message: string,
+    code: string,
+    details?: Record<string, any>
+  }
+}
+```
+
+### Error Handling
+```typescript
+// Always return appropriate status codes
+- 200: Success
+- 201: Created
+- 400: Bad request (validation error)
+- 401: Unauthorized
+- 403: Forbidden
+- 404: Not found
+- 500: Server error
+```
+
+---
+
+## Component Patterns
+
+### Forms
+Always use React Hook Form + Zod:
+
+```typescript
+const formSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+});
+
+type FormData = z.infer<typeof formSchema>;
+
+function StudentForm() {
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+  });
+
+  const onSubmit = async (data: FormData) => {
+    // Handle submission
+  };
+
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)}>
+      {/* Form fields */}
+    </form>
+  );
+}
+```
+
+### Data Fetching
+Use React Query for server state:
+
+```typescript
+function useStudents() {
+  return useQuery({
+    queryKey: ['students'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+```
+
+### Loading States
+Always handle loading, error, and empty states:
+
+```typescript
+function StudentList() {
+  const { data, isLoading, error } = useStudents();
+
+  if (isLoading) return <Skeleton />;
+  if (error) return <ErrorMessage error={error} />;
+  if (!data?.length) return <EmptyState />;
+
+  return <div>{/* Render data */}</div>;
+}
+```
+
+---
+
+## UI/UX Guidelines
+
+### Design System
+- Use shadcn/ui components as base
+- Customize with Tailwind utilities
+- Maintain consistent spacing: 4px, 8px, 16px, 24px, 32px, 48px
+- Use design tokens from `tailwind.config.ts`
+
+### Responsive Design
+- Mobile-first approach
+- Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
+- Test on actual devices (iPhone, Android)
+
+```tsx
+// Mobile-first responsive example
+<div className="flex flex-col md:flex-row gap-4 p-4 md:p-6">
+  <div className="w-full md:w-1/2">Content</div>
+</div>
+```
+
+### Colors
+```typescript
+// Primary: Purple (tutoring/education theme)
+primary: {
+  50: '#faf5ff',
+  500: '#a855f7',
+  600: '#9333ea',
+  700: '#7e22ce',
+}
+
+// Semantic colors
+success: green-500
+error: red-500
+warning: yellow-500
+info: blue-500
+```
+
+### Typography
+```typescript
+// Headings
+h1: text-4xl font-bold
+h2: text-3xl font-bold
+h3: text-2xl font-semibold
+h4: text-xl font-semibold
+
+// Body
+body: text-base
+small: text-sm
+xs: text-xs
+```
+
+---
+
+## Multi-Region Features
+
+### Currency & Pricing
+```typescript
+// Always store prices in USD cents in database
+// Display in user's local currency
+
+interface PricingConfig {
+  USD: { starter: 1400, pro: 2800 }; // $14, $28 in cents
+  NGN: { starter: 19880, pro: 39760 }; // Display equivalent
+  CAD: { starter: 14, pro: 28 };
+}
+
+// Detect user country and show appropriate pricing
+const userCountry = getUserCountry(); // from IP or user selection
+const pricing = getPricingForCountry(userCountry);
+```
+
+### Payment Processing
+```typescript
+// Route to correct payment processor based on country
+if (['NG', 'KE', 'GH'].includes(country)) {
+  // Use Paystack
+  usePaystack();
+} else {
+  // Use Stripe
+  useStripe();
+}
+```
+
+### Localization
+```typescript
+// Support for regional features
+const regionalConfig = {
+  NG: {
+    paymentMethods: ['bank_transfer', 'card', 'ussd', 'mobile_money'],
+    smsProvider: 'termii',
+    examTags: ['WAEC', 'JAMB', 'NECO', 'IGCSE'],
+  },
+  CA: {
+    paymentMethods: ['interac', 'card'],
+    smsProvider: 'twilio',
+    examTags: ['Ontario Curriculum', 'SAT', 'AP'],
+  },
+};
+```
+
+---
+
+## Performance Optimization
+
+### Image Optimization
+- Use Next.js `<Image>` component
+- Provide width/height
+- Use WebP format with fallbacks
+- Lazy load below-the-fold images
+
+```tsx
+<Image
+  src="/avatar.jpg"
+  alt="Student avatar"
+  width={64}
+  height={64}
+  className="rounded-full"
+  loading="lazy"
+/>
+```
+
+### Code Splitting
+- Use dynamic imports for heavy components
+- Lazy load routes
+
+```typescript
+const VideoClassroom = dynamic(() => import('@/components/VideoClassroom'), {
+  loading: () => <Skeleton />,
+});
+```
+
+### Database Queries
+- Use indexes on frequently queried columns
+- Limit data fetched (pagination)
+- Use `select()` to fetch only needed columns
+- Avoid N+1 queries (use joins)
+
+```typescript
+// Good - fetch only what you need
+const { data } = await supabase
+  .from('students')
+  .select('id, name, email')
+  .eq('tutor_id', tutorId)
+  .order('created_at', { ascending: false })
+  .limit(20);
+
+// Bad - fetch everything
+const { data } = await supabase
+  .from('students')
+  .select('*');
+```
+
+---
+
+## Security Best Practices
+
+### Authentication
+- Always verify user on server side
+- Use Supabase RLS for database security
+- Never trust client-side data
+
+```typescript
+// In API route
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+```
+
+### Input Validation
+- Validate all user input with Zod
+- Sanitize data before database insertion
+- Use parameterized queries (Supabase handles this)
+
+### Environment Variables
+- Never commit `.env.local`
+- Use Vercel environment variables for production
+- Prefix public variables with `NEXT_PUBLIC_`
+
+```typescript
+// .env.local
+DATABASE_URL=xxx          // Private (server-only)
+NEXT_PUBLIC_APP_URL=xxx   // Public (available in browser)
+```
+
+---
+
+## Testing Guidelines
+
+### What to Test
+- Critical user flows (signup, booking, payment)
+- Complex business logic
+- Utility functions
+- API routes
+
+### Testing Tools
+- Unit tests: Vitest
+- Component tests: React Testing Library
+- E2E tests: Playwright (optional for MVP)
+
+```typescript
+// Example component test
+import { render, screen } from '@testing-library/react';
+import { StudentCard } from './StudentCard';
+
+test('renders student name', () => {
+  render(<StudentCard name="John Doe" />);
+  expect(screen.getByText('John Doe')).toBeInTheDocument();
+});
+```
+
+---
+
+## Feature-Specific Guidelines
+
+### Booking System
+- Use UTC for all timestamps in database
+- Convert to user timezone for display
+- Handle timezone edge cases (DST changes)
+- Prevent double-booking with database constraints
+
+### Video Classroom
+- Use Daily.co React SDK
+- Implement fallback for poor connections
+- Show connection quality indicator
+- Auto-reconnect on disconnect
+
+```typescript
+import { useDaily } from '@daily-co/daily-react';
+
+function VideoRoom() {
+  const callObject = useDaily();
+  
+  // Handle connection states
+  useEffect(() => {
+    if (!callObject) return;
+    
+    callObject.on('error', (error) => {
+      console.error('Video error:', error);
+      // Show fallback UI
+    });
+  }, [callObject]);
+}
+```
+
+### Payment Collection
+- Never store raw card data (use Stripe/Paystack tokens)
+- Handle webhook events for async payment updates
+- Retry failed payments with exponential backoff
+- Show clear error messages to users
+
+### AI Session Summaries
+- Use streaming for better UX
+- Show loading states
+- Handle API errors gracefully
+- Cache results to avoid duplicate API calls
+
+```typescript
+// Example: AI summary generation
+async function generateSummary(sessionNotes: string) {
+  const response = await fetch('/api/ai/summarize', {
+    method: 'POST',
+    body: JSON.stringify({ notes: sessionNotes }),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to generate summary');
+  }
+  
+  return response.json();
+}
+```
+
+---
+
+## Common Pitfalls to Avoid
+
+### ❌ Don't
+- Use `any` type without good reason
+- Fetch data in components (use hooks)
+- Store sensitive data in localStorage
+- Commit environment variables
+- Use inline styles (use Tailwind)
+- Create god components (split into smaller pieces)
+- Ignore TypeScript errors
+- Skip error handling
+- Use `console.log` in production (use proper logging)
+
+### ✅ Do
+- Use TypeScript strictly
+- Implement proper error boundaries
+- Add loading states for async operations
+- Use semantic HTML
+- Add ARIA labels for accessibility
+- Test on mobile devices
+- Handle edge cases (empty states, errors)
+- Document complex logic
+- Use git branches for features
+- Write meaningful commit messages
+
+---
+
+## Git Workflow
+
+### Branch Naming
+- `feature/booking-calendar`
+- `fix/payment-webhook`
+- `chore/update-dependencies`
+
+### Commit Messages
+Follow conventional commits:
+```
+feat: add student progress tracking
+fix: resolve double-booking issue
+chore: update dependencies
+docs: add API documentation
+style: format code with prettier
+refactor: simplify booking logic
+test: add tests for payment flow
+```
+
+---
+
+## Environment Setup
+
+### Required Environment Variables
+```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Stripe
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# Paystack
+NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=
+PAYSTACK_SECRET_KEY=
+
+# Daily.co
+DAILY_API_KEY=
+
+# Resend (Email)
+RESEND_API_KEY=
+
+# SMS
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TERMII_API_KEY=
+
+# App Config
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+---
+
+## Development Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Run dev server
+npm run dev
+
+# Build for production
+npm run build
+
+# Run production build
+npm start
+
+# Lint code
+npm run lint
+
+# Format code
+npm run format
+
+# Run tests
+npm run test
+
+# Type check
+npm run type-check
+
+# Database migrations
+npx supabase db push
+
+# Generate types from database
+npx supabase gen types typescript --project-id YOUR_PROJECT_ID > lib/types/database.ts
+```
+
+---
+
+## AI Instructions for Cursor
+
+When generating code:
+1. Always use TypeScript with proper types
+2. Follow the component patterns shown above
+3. Use shadcn/ui components for UI
+4. Implement proper error handling and loading states
+5. Add comments for complex logic
+6. Keep functions small and focused (single responsibility)
+7. Use early returns to reduce nesting
+8. Prioritize readability over brevity
+9. Consider mobile-first responsive design
+10. Think about multi-region support (currency, payments, localization)
+
+When I ask you to create a new feature:
+1. Confirm the requirements
+2. Suggest the file structure
+3. Generate complete, working code
+4. Include TypeScript types
+5. Add error handling
+6. Include basic tests if applicable
+7. Suggest next steps or improvements
+
+When I ask you to debug:
+1. Analyze the error thoroughly
+2. Explain what's wrong and why
+3. Provide the fix with explanation
+4. Suggest preventive measures
+
+Remember:
+- ClassroomLY is for independent tutors (not agencies)
+- Primary markets: Nigeria and Canada
+- Keep it simple and fast
+- Mobile-first design
+- One codebase, multi-region support
+- Focus on MVP features first
+- No localStorage/sessionStorage (use Supabase for persistence)
+
+---
+
+## Priority Features (Build in This Order)
+
+### Phase 1: MVP Core (Week 1)
+1. Authentication (signup/login)
+2. Tutor profile setup
+3. Student management (CRUD)
+4. Booking link generation
+5. Simple calendar view
+6. Basic video integration (Daily.co)
+7. Payment setup (Stripe/Paystack connection)
+
+### Phase 2: Essential Features (Week 2)
+8. SMS/Email reminders
+9. Payment collection flow
+10. Session notes (manual)
+11. File upload/sharing
+12. Calendar sync (Google Calendar)
+13. Dashboard with analytics
+
+### Phase 3: Premium Features (Week 3)
+14. AI session summaries
+15. Parent portal
+16. WhatsApp integration
+17. Progress tracking
+18. Advanced analytics
+19. Session recording
+
+---
+
+This is a living document. Update as the project evolves.

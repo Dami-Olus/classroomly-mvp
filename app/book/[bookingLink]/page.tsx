@@ -17,6 +17,7 @@ import {
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import type { ClassWithTutor } from '@/types'
+import { generateTimeSlotsFromRanges, type TimeRange } from '@/lib/availability'
 
 interface BookableSlot {
   day: string
@@ -53,6 +54,7 @@ export default function PublicBookingPage() {
 
   const [selectedSlots, setSelectedSlots] = useState<BookableSlot[]>([])
   const [availableSlots, setAvailableSlots] = useState<BookableSlot[]>([])
+  const [bookedSlots, setBookedSlots] = useState<BookableSlot[]>([])
 
   useEffect(() => {
     loadClassData()
@@ -69,6 +71,69 @@ export default function PublicBookingPage() {
     }
   }, [profile])
 
+  const loadBookedSlots = async (idToSearch: string, isTutorId: boolean = false) => {
+    try {
+      console.log('=== Loading Booked Slots (GLOBAL TUTOR AVAILABILITY) ===')
+      console.log(isTutorId ? 'Tutor ID:' : 'Class ID:', idToSearch)
+      
+      // Query by tutor_id to get ALL bookings across ALL classes
+      const query = supabase
+        .from('bookings')
+        .select('id, scheduled_slots, status, student_name, class_id, tutor_id')
+      
+      if (isTutorId) {
+        query.eq('tutor_id', idToSearch)
+      } else {
+        query.eq('class_id', idToSearch)
+      }
+      
+      const { data: allBookings } = await query
+      
+      console.log(`ALL bookings for this ${isTutorId ? 'TUTOR' : 'class'} (any status):`, allBookings)
+      
+      // Now get only confirmed/rescheduled bookings
+      const confirmedQuery = supabase
+        .from('bookings')
+        .select('scheduled_slots, status, student_name, class_id, tutor_id')
+        .in('status', ['confirmed', 'rescheduled'])
+      
+      if (isTutorId) {
+        confirmedQuery.eq('tutor_id', idToSearch)
+      } else {
+        confirmedQuery.eq('class_id', idToSearch)
+      }
+      
+      const { data: bookings, error } = await confirmedQuery
+      
+      console.log('Confirmed bookings only. Error:', error, 'Data:', bookings)
+      console.log('🌍 GLOBAL SYSTEM: These slots are unavailable across ALL classes for this tutor')
+
+      if (error) {
+        console.error('Error loading booked slots:', error)
+        return
+      }
+
+      // Extract all booked slots
+      const allBookedSlots: BookableSlot[] = []
+      if (bookings) {
+        console.log('Raw bookings data:', bookings)
+        bookings.forEach((booking) => {
+          console.log('Processing booking.scheduled_slots:', booking.scheduled_slots)
+          const slots = booking.scheduled_slots as BookableSlot[]
+          if (slots && Array.isArray(slots)) {
+            allBookedSlots.push(...slots)
+          }
+        })
+      }
+
+      console.log('Loaded booked slots:', allBookedSlots)
+      console.log('Total booked slots count:', allBookedSlots.length)
+      setBookedSlots(allBookedSlots)
+    } catch (error) {
+      console.error('Error in loadBookedSlots:', error)
+    }
+  }
+
   const loadClassData = async () => {
     try {
       const { data, error } = await supabase
@@ -76,7 +141,8 @@ export default function PublicBookingPage() {
         .select(`
           *,
           tutor:tutors(
-            *,
+            id,
+            availability,
             user:profiles(
               first_name,
               last_name,
@@ -95,8 +161,35 @@ export default function PublicBookingPage() {
         return
       }
 
+      console.log('=== Class Data Loaded ===')
+      console.log('Class ID:', data.id)
+      console.log('Class Title:', data.title)
+      console.log('Tutor ID:', data.tutor?.id)
+      console.log('Tutor availability:', data.tutor?.availability)
+      
       setClassData(data as any)
-      setAvailableSlots((data.available_slots as BookableSlot[]) || [])
+      
+      // Generate available slots from TUTOR's global availability (not class-specific)
+      const tutorAvailability = (data.tutor as any)?.availability
+      if (tutorAvailability && tutorAvailability.slots && Array.isArray(tutorAvailability.slots)) {
+        const slots = generateTimeSlotsFromRanges(
+          tutorAvailability.slots as TimeRange[],
+          data.duration || 60
+        )
+        console.log('Generated slots from TUTOR availability:', slots.length, 'slots')
+        setAvailableSlots(slots)
+      } else {
+        console.warn('Tutor has no availability set')
+        toast.error('This tutor has not configured their availability yet')
+        setAvailableSlots([])
+      }
+      
+      // Load booked slots from ALL of this tutor's bookings (not just this class)
+      const tutorId = (data.tutor as any)?.id
+      if (tutorId) {
+        console.log('Loading booked slots for TUTOR (global):', tutorId)
+        await loadBookedSlots(tutorId, true) // Pass true to indicate tutor-level query
+      }
     } catch (error) {
       console.error('Error loading class:', error)
       toast.error('Failed to load class details')
@@ -106,6 +199,16 @@ export default function PublicBookingPage() {
   }
 
   const toggleSlotSelection = (slot: BookableSlot) => {
+    // Check if slot is already booked
+    const isBooked = bookedSlots.some(
+      (s) => s.day === slot.day && s.time === slot.time
+    )
+    
+    if (isBooked) {
+      toast.error('This time slot is already booked')
+      return
+    }
+
     const isSelected = selectedSlots.some(
       (s) => s.day === slot.day && s.time === slot.time
     )
@@ -141,10 +244,17 @@ export default function PublicBookingPage() {
     setBooking(true)
 
     try {
-      // Create booking with student_id if user is logged in
+      // Get tutor ID from class data
+      const tutorId = (classData as any).tutor?.id
+      if (!tutorId) {
+        throw new Error('Tutor information not found')
+      }
+
+      // Create booking with student_id and tutor_id
       const bookingData = {
         class_id: classData.id,
-        student_id: user?.id || null, // Add user ID if logged in
+        tutor_id: tutorId, // Add tutor_id for global availability tracking
+        student_id: user?.id || null,
         student_name: formData.studentName,
         student_email: formData.studentEmail,
         scheduled_slots: selectedSlots,
@@ -155,7 +265,33 @@ export default function PublicBookingPage() {
 
       console.log('Creating booking with data:', bookingData)
       console.log('User authenticated:', !!user)
-      console.log('User ID:', user?.id)
+      console.log('🌍 GLOBAL AVAILABILITY: This booking will block slots across ALL tutor classes')
+      
+      // Check for scheduling conflicts before creating booking (check tutor-level)
+      console.log('Checking for scheduling conflicts (global tutor availability)...')
+      const conflictResponse = await fetch('/api/check-conflicts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tutorId: tutorId, // Use tutorId instead of classId for global check
+          classId: classData.id,
+          selectedSlots,
+        }),
+      })
+
+      if (!conflictResponse.ok) {
+        throw new Error('Failed to check for scheduling conflicts')
+      }
+
+      const conflictData = await conflictResponse.json()
+      console.log('Conflict check result:', conflictData)
+
+      if (conflictData.hasConflicts) {
+        const conflictList = conflictData.conflicts.join(', ')
+        throw new Error(
+          `The following time slots are already booked: ${conflictList}. Please select different times.`
+        )
+      }
       
       const { data: createdBooking, error: bookingError } = await supabase
         .from('bookings')
@@ -518,16 +654,29 @@ export default function PublicBookingPage() {
                         const isSelected = selectedSlots.some(
                           (s) => s.day === slot.day && s.time === slot.time
                         )
+                        const isBooked = bookedSlots.some(
+                          (s) => s.day === slot.day && s.time === slot.time
+                        )
+                        
+                        // Debug logging for first slot to see what's happening
+                        if (index === 0 && bookedSlots.length > 0) {
+                          console.log('Checking slot:', slot, 'against booked:', bookedSlots[0], 'isBooked:', isBooked)
+                        }
+                        
                         return (
                           <button
                             key={`${day}-${slot.time}-${index}`}
                             type="button"
                             onClick={() => toggleSlotSelection(slot)}
+                            disabled={isBooked}
                             className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                              isSelected
+                              isBooked
+                                ? 'bg-red-100 text-red-400 cursor-not-allowed line-through'
+                                : isSelected
                                 ? 'bg-primary-600 text-white'
                                 : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
                             }`}
+                            title={isBooked ? 'This slot is already booked' : ''}
                           >
                             {slot.time}
                           </button>

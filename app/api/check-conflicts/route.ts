@@ -8,16 +8,37 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { classId, selectedSlots } = await request.json()
+    const { classId, tutorId, selectedSlots } = await request.json()
 
-    // Get all confirmed bookings for this class
-    const { data: bookings, error } = await supabase
+    console.log('🌍 GLOBAL CONFLICT CHECK - Checking tutor availability across ALL classes')
+    console.log('Tutor ID:', tutorId)
+    console.log('Class ID:', classId)
+    console.log('Selected slots:', selectedSlots)
+
+    // Get all confirmed bookings for this TUTOR (across all classes)
+    // This is the key change: query by tutor_id instead of class_id
+    let query = supabase
       .from('bookings')
-      .select('scheduled_slots')
-      .eq('class_id', classId)
+      .select('scheduled_slots, class_id')
       .in('status', ['confirmed', 'rescheduled'])
 
+    if (tutorId) {
+      // Global tutor availability - check ALL tutor's bookings
+      query = query.eq('tutor_id', tutorId)
+      console.log('Querying by tutor_id (global availability)')
+    } else if (classId) {
+      // Fallback to class-specific (old behavior)
+      query = query.eq('class_id', classId)
+      console.log('Querying by class_id (legacy behavior)')
+    } else {
+      throw new Error('Either tutorId or classId must be provided')
+    }
+
+    const { data: bookings, error } = await query
+
     if (error) throw error
+
+    console.log('Found bookings:', bookings?.length || 0)
 
     // Check for conflicts
     const conflicts: string[] = []
@@ -37,6 +58,8 @@ export async function POST(request: NextRequest) {
         })
       })
     }
+
+    console.log('Conflicts found:', conflicts)
 
     return NextResponse.json({
       hasConflicts: conflicts.length > 0,
