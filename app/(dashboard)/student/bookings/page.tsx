@@ -5,7 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
-import { Calendar, Clock, BookOpen, User } from 'lucide-react'
+import { Calendar, Clock, BookOpen, User, Video, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDate } from '@/lib/utils'
 import type { BookingWithDetails } from '@/types'
@@ -15,6 +15,7 @@ export default function StudentBookingsPage() {
   const { profile } = useAuth()
   const supabase = createClient()
   const [bookings, setBookings] = useState<BookingWithDetails[]>([])
+  const [classrooms, setClassrooms] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -25,7 +26,8 @@ export default function StudentBookingsPage() {
     if (!profile) return
 
     try {
-      const { data, error } = await supabase
+      // Load bookings
+      const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
           *,
@@ -45,15 +47,35 @@ export default function StudentBookingsPage() {
         .eq('student_id', profile.id)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (bookingsError) throw bookingsError
 
-      setBookings(data as any || [])
+      // Load classrooms for these bookings
+      const { data: classroomsData, error: classroomsError } = await supabase
+        .from('classrooms')
+        .select(`
+          *,
+          booking:bookings(
+            id,
+            student_id,
+            status
+          )
+        `)
+        .in('booking_id', bookingsData?.map(b => b.id) || [])
+
+      if (classroomsError) throw classroomsError
+
+      setBookings(bookingsData as any || [])
+      setClassrooms(classroomsData || [])
     } catch (error) {
       console.error('Error loading bookings:', error)
       toast.error('Failed to load bookings')
     } finally {
       setLoading(false)
     }
+  }
+
+  const joinClassroom = (roomUrl: string) => {
+    window.open(`/classroom/${roomUrl}`, '_blank')
   }
 
   const getStatusColor = (status: string) => {
@@ -173,6 +195,23 @@ export default function StudentBookingsPage() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Join Classroom Button */}
+                    {(() => {
+                      const classroom = classrooms.find(c => c.booking_id === booking.id)
+                      return classroom && (
+                        <div className="mb-4">
+                          <button
+                            onClick={() => joinClassroom(classroom.room_url)}
+                            className="btn-primary flex items-center gap-2 w-full justify-center"
+                          >
+                            <Video className="w-4 h-4" />
+                            Join Classroom
+                            <ExternalLink className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )
+                    })()}
 
                     {/* Scheduled Slots */}
                     <div className="bg-secondary-50 rounded-lg p-4">

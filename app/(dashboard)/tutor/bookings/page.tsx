@@ -5,7 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
-import { Calendar, Clock, User, Mail, BookOpen } from 'lucide-react'
+import { Calendar, Clock, User, Mail, BookOpen, Video, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDate, formatTime } from '@/lib/utils'
 import type { BookingWithDetails } from '@/types'
@@ -14,6 +14,7 @@ export default function TutorBookingsPage() {
   const { profile } = useAuth()
   const supabase = createClient()
   const [bookings, setBookings] = useState<BookingWithDetails[]>([])
+  const [classrooms, setClassrooms] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'completed' | 'cancelled'>('all')
 
@@ -60,13 +61,33 @@ export default function TutorBookingsPage() {
 
       if (error) throw error
 
+      // Load classrooms for these bookings
+      const { data: classroomsData, error: classroomsError } = await supabase
+        .from('classrooms')
+        .select(`
+          *,
+          booking:bookings(
+            id,
+            student_id,
+            status
+          )
+        `)
+        .in('booking_id', data?.map(b => b.id) || [])
+
+      if (classroomsError) throw classroomsError
+
       setBookings(data as any || [])
+      setClassrooms(classroomsData || [])
     } catch (error) {
       console.error('Error loading bookings:', error)
       toast.error('Failed to load bookings')
     } finally {
       setLoading(false)
     }
+  }
+
+  const joinClassroom = (roomUrl: string) => {
+    window.open(`/classroom/${roomUrl}`, '_blank')
   }
 
   const filteredBookings = bookings.filter((booking) => {
@@ -215,6 +236,23 @@ export default function TutorBookingsPage() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Start Session Button */}
+                    {(() => {
+                      const classroom = classrooms.find(c => c.booking_id === booking.id)
+                      return classroom && (
+                        <div className="mb-4">
+                          <button
+                            onClick={() => joinClassroom(classroom.room_url)}
+                            className="btn-primary flex items-center gap-2 w-full justify-center"
+                          >
+                            <Video className="w-4 h-4" />
+                            Start Session
+                            <ExternalLink className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )
+                    })()}
 
                     {/* Scheduled Slots */}
                     <div className="bg-secondary-50 rounded-lg p-4">

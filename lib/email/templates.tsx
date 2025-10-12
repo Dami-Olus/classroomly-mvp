@@ -1,4 +1,4 @@
-import * as React from 'react'
+// Email HTML Templates as plain strings
 
 interface BookingConfirmationEmailProps {
   studentName: string
@@ -18,11 +18,20 @@ export function BookingConfirmationEmail({
   duration,
   scheduledSlots,
   bookingId,
-}: BookingConfirmationEmailProps) {
-  return (
-    <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '600px', margin: '0 auto' }}>
-      <div style={{ backgroundColor: '#2563eb', color: 'white', padding: '32px', textAlign: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '28px' }}>Booking Confirmed! 🎉</h1>
+}: BookingConfirmationEmailProps): string {
+  const slotsHTML = scheduledSlots
+    .map(
+      (slot) =>
+        `<div style="padding: 8px 0; color: #1e293b;">
+          <strong>${slot.day}</strong> at <strong style="color: #2563eb;">${slot.time}</strong>
+        </div>`
+    )
+    .join('')
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background-color: #2563eb; color: white; padding: 32px; text-align: center;">
+        <h1 style="margin: 0; font-size: 28px;">Booking Confirmed! 🎉</h1>
       </div>
       
       <div style={{ padding: '32px', backgroundColor: '#ffffff' }}>

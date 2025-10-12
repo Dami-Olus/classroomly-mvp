@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resend, FROM_EMAIL, FROM_NAME } from '@/lib/email/resend'
-import { BookingConfirmationEmail, TutorBookingNotificationEmail } from '@/lib/email/templates'
-import { render } from 'react-email'
+import {
+  generateBookingConfirmationEmail,
+  generateTutorBookingNotificationEmail,
+} from '@/lib/email/templates-html'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,17 +22,15 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Send confirmation email to student
-    const studentEmailHtml = render(
-      BookingConfirmationEmail({
-        studentName,
-        tutorName,
-        className,
-        subject,
-        duration,
-        scheduledSlots,
-        bookingId,
-      })
-    )
+    const studentEmailHtml = generateBookingConfirmationEmail({
+      studentName,
+      tutorName,
+      className,
+      subject,
+      duration,
+      scheduledSlots,
+      bookingId,
+    })
 
     const studentEmailResult = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
@@ -40,16 +40,14 @@ export async function POST(request: NextRequest) {
     })
 
     // Send notification email to tutor
-    const tutorEmailHtml = render(
-      TutorBookingNotificationEmail({
-        tutorName,
-        studentName,
-        studentEmail,
-        className,
-        scheduledSlots,
-        notes,
-      })
-    )
+    const tutorEmailHtml = generateTutorBookingNotificationEmail({
+      tutorName,
+      studentName,
+      studentEmail,
+      className,
+      scheduledSlots,
+      notes,
+    })
 
     const tutorEmailResult = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
