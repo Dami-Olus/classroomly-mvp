@@ -8,8 +8,11 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import FileUpload from '@/components/FileUpload'
 import MaterialsList from '@/components/MaterialsList'
+import RescheduleModal from '@/components/RescheduleModal'
+import RescheduleRequests from '@/components/RescheduleRequests'
 import { uploadFile } from '@/lib/storage'
-import { ArrowLeft, Calendar, Clock, User, FileText, Loader2 } from 'lucide-react'
+import { generateTimeSlotsFromRanges, type TimeRange } from '@/lib/availability'
+import { ArrowLeft, Calendar, Clock, User, FileText, Loader2, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 
@@ -21,10 +24,15 @@ interface BookingData {
   status: string
   notes: string | null
   created_at: string
+  tutor_id: string
   class: {
     title: string
     subject: string
     duration: number
+    tutor: {
+      id: string
+      availability: any
+    }
   }
 }
 
@@ -37,8 +45,12 @@ export default function BookingDetailPage() {
 
   const [booking, setBooking] = useState<BookingData | null>(null)
   const [materials, setMaterials] = useState<any[]>([])
+  const [rescheduleRequests, setRescheduleRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'details' | 'materials'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'materials' | 'reschedule'>('details')
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false)
+  const [selectedSlotForReschedule, setSelectedSlotForReschedule] = useState<{ day: string; time: string } | null>(null)
+  const [availableSlots, setAvailableSlots] = useState<Array<{ day: string; time: string }>>([])
 
   useEffect(() => {
     loadBookingData()
@@ -46,7 +58,7 @@ export default function BookingDetailPage() {
 
   const loadBookingData = async () => {
     try {
-      // Load booking
+      // Load booking with tutor availability
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')
         .select(`
@@ -54,7 +66,11 @@ export default function BookingDetailPage() {
           class:classes(
             title,
             subject,
-            duration
+            duration,
+            tutor:tutors(
+              id,
+              availability
+            )
           )
         `)
         .eq('id', bookingId)
@@ -63,8 +79,21 @@ export default function BookingDetailPage() {
       if (bookingError) throw bookingError
       setBooking(bookingData as any)
 
+      // Generate available slots from tutor's availability
+      const tutorAvailability = (bookingData as any).class?.tutor?.availability
+      if (tutorAvailability?.slots && Array.isArray(tutorAvailability.slots)) {
+        const slots = generateTimeSlotsFromRanges(
+          tutorAvailability.slots as TimeRange[],
+          (bookingData as any).class.duration || 60
+        )
+        setAvailableSlots(slots)
+      }
+
       // Load materials
       await loadMaterials()
+      
+      // Load reschedule requests
+      await loadRescheduleRequests()
     } catch (error: any) {
       console.error('Error loading booking:', error)
       toast.error('Failed to load booking details')
@@ -91,6 +120,31 @@ export default function BookingDetailPage() {
       setMaterials(data || [])
     } catch (error: any) {
       console.error('Error loading materials:', error)
+    }
+  }
+
+  const loadRescheduleRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reschedule_requests')
+        .select(`
+          *,
+          requester:profiles!requested_by(
+            first_name,
+            last_name
+          ),
+          responder:profiles!responded_by(
+            first_name,
+            last_name
+          )
+        `)
+        .eq('booking_id', bookingId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setRescheduleRequests(data || [])
+    } catch (error: any) {
+      console.error('Error loading reschedule requests:', error)
     }
   }
 
@@ -191,6 +245,16 @@ export default function BookingDetailPage() {
               >
                 Materials ({materials.length})
               </button>
+              <button
+                onClick={() => setActiveTab('reschedule')}
+                className={`pb-4 px-2 font-medium transition-colors ${
+                  activeTab === 'reschedule'
+                    ? 'text-primary-600 border-b-2 border-primary-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Reschedule ({rescheduleRequests.filter(r => r.status === 'pending').length})
+              </button>
             </div>
           </div>
 
@@ -220,7 +284,23 @@ export default function BookingDetailPage() {
 
               {/* Schedule */}
               <div className="card">
-                <h2 className="text-xl font-semibold mb-4">Schedule</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">Schedule</h2>
+                  {booking.status !== 'completed' && booking.status !== 'cancelled' && (
+                    <button
+                      onClick={() => {
+                        if (booking.scheduled_slots.length > 0) {
+                          setSelectedSlotForReschedule(booking.scheduled_slots[0])
+                          setShowRescheduleModal(true)
+                        }
+                      }}
+                      className="text-sm btn-secondary flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Request Reschedule
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-2">
                   {booking.scheduled_slots.map((slot, index) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -280,7 +360,43 @@ export default function BookingDetailPage() {
               </div>
             </div>
           )}
+
+          {activeTab === 'reschedule' && (
+            <div className="space-y-6">
+              {/* Reschedule Requests */}
+              <div className="card">
+                <h2 className="text-xl font-semibold mb-4">Reschedule Requests</h2>
+                <RescheduleRequests
+                  requests={rescheduleRequests}
+                  currentUserId={user?.id || ''}
+                  bookingId={bookingId}
+                  onUpdate={() => {
+                    loadRescheduleRequests()
+                    loadBookingData() // Reload to get updated slots
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Reschedule Modal */}
+        {showRescheduleModal && selectedSlotForReschedule && (
+          <RescheduleModal
+            bookingId={bookingId}
+            currentSlot={selectedSlotForReschedule}
+            availableSlots={availableSlots}
+            onClose={() => {
+              setShowRescheduleModal(false)
+              setSelectedSlotForReschedule(null)
+            }}
+            onSuccess={() => {
+              loadRescheduleRequests()
+              loadBookingData()
+            }}
+            currentUserId={user?.id || ''}
+          />
+        )}
       </DashboardLayout>
     </ProtectedRoute>
   )
