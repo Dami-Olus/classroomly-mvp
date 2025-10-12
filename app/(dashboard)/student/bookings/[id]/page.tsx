@@ -104,12 +104,43 @@ export default function StudentBookingDetailPage() {
 
       // Generate available slots from tutor's availability
       const tutorAvailability = (bookingData as any).class?.tutor?.availability
+      const tutorId = (bookingData as any).class?.tutor?.id
+      
       if (tutorAvailability?.slots && Array.isArray(tutorAvailability.slots)) {
-        const slots = generateTimeSlotsFromRanges(
+        const allSlots = generateTimeSlotsFromRanges(
           tutorAvailability.slots as TimeRange[],
           (bookingData as any).class.duration || 60
         )
-        setAvailableSlots(slots)
+        
+        // Get all booked slots for this tutor (global availability)
+        const { data: tutorBookings } = await supabase
+          .from('bookings')
+          .select('scheduled_slots')
+          .eq('tutor_id', tutorId)
+          .in('status', ['confirmed', 'rescheduled'])
+          .neq('id', bookingId) // Exclude current booking
+        
+        // Extract booked slots
+        const bookedSlots: Array<{day: string, time: string}> = []
+        if (tutorBookings) {
+          tutorBookings.forEach(booking => {
+            const slots = booking.scheduled_slots as Array<{day: string, time: string}>
+            if (slots) bookedSlots.push(...slots)
+          })
+        }
+        
+        // Filter out booked slots
+        const availableForReschedule = allSlots.filter(slot => 
+          !bookedSlots.some(booked => 
+            booked.day === slot.day && booked.time === slot.time
+          )
+        )
+        
+        console.log('Total slots from tutor availability:', allSlots.length)
+        console.log('Booked slots (other bookings):', bookedSlots.length)
+        console.log('Available for reschedule:', availableForReschedule.length)
+        
+        setAvailableSlots(availableForReschedule)
       }
 
       // Load materials
