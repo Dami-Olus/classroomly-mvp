@@ -279,6 +279,16 @@ export default function TutorBookingsPage() {
                         </p>
                       </div>
                     )}
+
+                    {/* View Details Button */}
+                    <div className="mt-4 pt-4 border-t">
+                      <Link
+                        href={`/tutor/bookings/${booking.id}`}
+                        className="btn-secondary w-full text-center"
+                      >
+                        View Details & Materials
+                      </Link>
+                    </div>
                   </div>
                 )
               })}
