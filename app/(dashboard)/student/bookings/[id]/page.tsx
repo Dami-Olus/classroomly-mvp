@@ -256,7 +256,7 @@ export default function StudentBookingDetailPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute requireRole="student">
+      <ProtectedRoute requiredRole="student">
         <DashboardLayout>
           <div className="flex items-center justify-center min-h-[400px]">
             <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
@@ -268,7 +268,7 @@ export default function StudentBookingDetailPage() {
 
   if (!booking) {
     return (
-      <ProtectedRoute requireRole="student">
+      <ProtectedRoute requiredRole="student">
         <DashboardLayout>
           <div className="text-center py-12">
             <p className="text-gray-500">Booking not found</p>
@@ -285,7 +285,7 @@ export default function StudentBookingDetailPage() {
   const canJoinClassroom = booking.classroom && ['active', 'scheduled'].includes(booking.classroom.status)
 
   return (
-    <ProtectedRoute requireRole="student">
+    <ProtectedRoute requiredRole="student">
       <DashboardLayout>
         <div className="max-w-4xl mx-auto">
           {/* Header */}

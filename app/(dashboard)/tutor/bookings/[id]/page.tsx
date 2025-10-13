@@ -235,7 +235,7 @@ export default function BookingDetailPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute requireRole="tutor">
+      <ProtectedRoute requiredRole="tutor">
         <DashboardLayout>
           <div className="flex items-center justify-center min-h-[400px]">
             <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
@@ -247,7 +247,7 @@ export default function BookingDetailPage() {
 
   if (!booking) {
     return (
-      <ProtectedRoute requireRole="tutor">
+      <ProtectedRoute requiredRole="tutor">
         <DashboardLayout>
           <div className="text-center py-12">
             <p className="text-gray-500">Booking not found</p>
@@ -261,7 +261,7 @@ export default function BookingDetailPage() {
   }
 
   return (
-    <ProtectedRoute requireRole="tutor">
+    <ProtectedRoute requiredRole="tutor">
       <DashboardLayout>
         <div className="max-w-4xl mx-auto">
           {/* Header */}
