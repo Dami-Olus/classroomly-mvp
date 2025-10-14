@@ -66,10 +66,17 @@ export default function TutorSessionDetailPage() {
         }
       }
 
-      // Load session
+      // Load session with classroom info
       const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
-        .select('*')
+        .select(`
+          *,
+          classroom:classrooms(
+            id,
+            room_url,
+            status
+          )
+        `)
         .eq('id', sessionId)
         .single()
 
@@ -416,9 +423,9 @@ export default function TutorSessionDetailPage() {
                     </button>
                   )}
                   
-                  {session.classroom_id && !isCompleted && (
+                  {session.classroom_id && session.classroom?.room_url && !isCompleted && (
                     <Link
-                      href={`/classroom/${session.classroom_id}`}
+                      href={`/classroom/${session.classroom.room_url}`}
                       target="_blank"
                       className="w-full btn-primary flex items-center justify-center gap-2"
                     >
