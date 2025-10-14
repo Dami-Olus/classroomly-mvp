@@ -45,6 +45,11 @@ ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES bookings(id) ON DELETE CASCA
 ADD COLUMN IF NOT EXISTS session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
 ADD COLUMN IF NOT EXISTS class_id UUID REFERENCES classes(id) ON DELETE CASCADE;
 
+-- Make classroom_id nullable since materials can now be linked to sessions/bookings/classes
+-- instead of just classrooms
+ALTER TABLE materials
+ALTER COLUMN classroom_id DROP NOT NULL;
+
 -- Rename uploader_id to uploaded_by for consistency with session_materials
 -- First check if uploader_id exists and uploaded_by doesn't
 DO $$
