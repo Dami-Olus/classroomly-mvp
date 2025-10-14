@@ -154,8 +154,9 @@ export default function BookingDetailPage() {
 
   const loadMaterials = async () => {
     try {
+      // Load booking-level materials (session_id IS NULL)
       const { data, error } = await supabase
-        .from('session_materials')
+        .from('materials')
         .select(`
           *,
           uploader:profiles!uploaded_by(
@@ -164,6 +165,7 @@ export default function BookingDetailPage() {
           )
         `)
         .eq('booking_id', bookingId)
+        .is('session_id', null) // Only booking-level materials
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -228,10 +230,17 @@ export default function BookingDetailPage() {
       // Upload file to storage
       const uploadResult = await uploadFile(file, bookingId, user.id)
 
-      // Save metadata to database
-      const { error } = await supabase.from('session_materials').insert({
+      // Get uploader name from profile
+      const uploaderName = profile 
+        ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown'
+        : 'Unknown'
+
+      // Save metadata to database (booking-level: no session_id)
+      const { error } = await supabase.from('materials').insert({
         booking_id: bookingId,
+        session_id: null, // NULL = booking-level material (visible in all sessions)
         uploaded_by: user.id,
+        uploader_name: uploaderName,
         file_name: uploadResult.fileName,
         file_url: uploadResult.url,
         file_size: uploadResult.fileSize,
@@ -240,6 +249,8 @@ export default function BookingDetailPage() {
 
       if (error) throw error
 
+      toast.success('Booking-level material uploaded! Visible in all sessions.')
+      
       // Reload materials
       await loadMaterials()
     } catch (error) {
@@ -426,13 +437,20 @@ export default function BookingDetailPage() {
             <div className="space-y-6">
               {/* Upload Section */}
               <div className="card">
-                <h2 className="text-xl font-semibold mb-4">Upload Materials</h2>
+                <h2 className="text-xl font-semibold mb-4">Upload Booking-Level Materials</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  📚 Materials uploaded here will be visible in <strong>all sessions</strong> of this booking.
+                  For session-specific materials, upload from individual session pages.
+                </p>
                 <FileUpload onUpload={handleUpload} />
               </div>
 
               {/* Materials List */}
               <div className="card">
-                <h2 className="text-xl font-semibold mb-4">Shared Materials</h2>
+                <h2 className="text-xl font-semibold mb-4">Booking-Level Materials</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  These materials are shared across all sessions in this booking.
+                </p>
                 <MaterialsList
                   bookingId={bookingId}
                   materials={materials}

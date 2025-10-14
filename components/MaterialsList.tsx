@@ -15,6 +15,8 @@ interface Material {
   description: string | null
   uploaded_by: string
   created_at: string
+  session_id: string | null
+  booking_id: string | null
   uploader?: {
     first_name: string
     last_name: string
@@ -23,15 +25,19 @@ interface Material {
 
 interface MaterialsListProps {
   bookingId: string
+  sessionId?: string // Optional: if provided, shows session + booking materials
   materials: Material[]
   currentUserId?: string
+  showMaterialType?: boolean // Show badge for booking vs session level
   onDelete?: () => void
 }
 
 export default function MaterialsList({
   bookingId,
+  sessionId,
   materials,
   currentUserId,
+  showMaterialType = false,
   onDelete,
 }: MaterialsListProps) {
   const supabase = createClient()
@@ -84,7 +90,7 @@ export default function MaterialsList({
 
       // Delete from database
       const { error } = await supabase
-        .from('session_materials')
+        .from('materials')
         .delete()
         .eq('id', material.id)
 
@@ -132,9 +138,20 @@ export default function MaterialsList({
 
               {/* File Info */}
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-gray-900 truncate">
-                  {material.file_name}
-                </h4>
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-medium text-gray-900 truncate">
+                    {material.file_name}
+                  </h4>
+                  {showMaterialType && (
+                    <span className={`px-2 py-0.5 text-xs rounded-full flex-shrink-0 ${
+                      material.session_id 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'bg-purple-100 text-purple-700'
+                    }`}>
+                      {material.session_id ? '📄 This Session' : '📚 All Sessions'}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
                   <span>{material.file_size ? formatFileSize(material.file_size) : 'Unknown size'}</span>
                   <span>•</span>

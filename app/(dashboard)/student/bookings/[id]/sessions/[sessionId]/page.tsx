@@ -136,11 +136,18 @@ export default function StudentSessionDetailPage() {
         }
       }
 
-      // Load session materials
+      // Load session materials (both session-specific and booking-level)
       const { data: materialsData } = await supabase
-        .from('session_materials')
-        .select('*')
-        .eq('session_id', sessionId)
+        .from('materials')
+        .select(`
+          *,
+          uploader:profiles!uploaded_by(
+            first_name,
+            last_name
+          )
+        `)
+        .or(`session_id.eq.${sessionId},and(booking_id.eq.${bookingId},session_id.is.null)`)
+        .order('created_at', { ascending: false })
 
       setMaterials(materialsData || [])
 
@@ -266,11 +273,16 @@ export default function StudentSessionDetailPage() {
               {/* Session Materials */}
               <div className="card">
                 <h2 className="text-xl font-semibold mb-4">Session Materials</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Materials for this session. 📚 Booking-level materials are available across all sessions.
+                </p>
                 
                 {materials.length > 0 ? (
                   <MaterialsList 
                     bookingId={bookingId}
-                    materials={materials} 
+                    sessionId={sessionId}
+                    materials={materials}
+                    showMaterialType={true}
                   />
                 ) : (
                   <div className="text-center py-8 text-gray-500">

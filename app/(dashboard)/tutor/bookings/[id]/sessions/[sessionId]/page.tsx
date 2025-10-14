@@ -97,11 +97,18 @@ export default function TutorSessionDetailPage() {
       if (bookingError) throw bookingError
       setBooking(bookingData)
 
-      // Load session materials
+      // Load session materials (both session-specific and booking-level)
       const { data: materialsData } = await supabase
-        .from('session_materials')
-        .select('*')
-        .eq('session_id', sessionId)
+        .from('materials')
+        .select(`
+          *,
+          uploader:profiles!uploaded_by(
+            first_name,
+            last_name
+          )
+        `)
+        .or(`session_id.eq.${sessionId},and(booking_id.eq.${bookingId},session_id.is.null)`)
+        .order('created_at', { ascending: false })
 
       setMaterials(materialsData || [])
 
@@ -407,15 +414,22 @@ export default function TutorSessionDetailPage() {
               {/* Session Materials */}
               <div className="card">
                 <h2 className="text-xl font-semibold mb-4">Session Materials</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  📄 Materials uploaded here are <strong>session-specific</strong>. 
+                  For materials visible across all sessions, upload from the Booking Materials tab.
+                </p>
                 
                 <FileUpload
                   onUpload={handleMaterialUpload}
                 />
                 
                 <div className="mt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">All Materials</h3>
                   <MaterialsList
                     bookingId={bookingId}
+                    sessionId={sessionId}
                     materials={materials}
+                    showMaterialType={true}
                     onDelete={handleMaterialDeleted}
                   />
                 </div>
