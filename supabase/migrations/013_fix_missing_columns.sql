@@ -184,6 +184,17 @@ CREATE POLICY "Booking participants can update sessions"
   );
 
 -- ============================================
+-- 6. Update reschedule_requests to support session-level reschedules
+-- ============================================
+-- Add session_id to link reschedule requests to specific sessions
+ALTER TABLE reschedule_requests
+ADD COLUMN IF NOT EXISTS session_id UUID REFERENCES sessions(id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_reschedule_requests_session_id ON reschedule_requests(session_id);
+
+COMMENT ON COLUMN reschedule_requests.session_id IS 'Links reschedule request to a specific session (optional, for session-level reschedules)';
+
+-- ============================================
 -- Success message
 -- ============================================
 DO $$

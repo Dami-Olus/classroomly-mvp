@@ -7,6 +7,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import SessionNotesView from '@/components/SessionNotesView'
 import MaterialsList from '@/components/MaterialsList'
+import SessionRescheduleModal from '@/components/SessionRescheduleModal'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { 
@@ -34,12 +35,19 @@ export default function StudentSessionDetailPage() {
   const [materials, setMaterials] = useState<any[]>([])
   const [notes, setNotes] = useState<any>(null)
   const [tutor, setTutor] = useState<any>(null)
+  const [tutorId, setTutorId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false)
 
   useEffect(() => {
     loadSessionData()
   }, [sessionId])
+
+  const handleRescheduleSuccess = () => {
+    setShowRescheduleModal(false)
+    loadSessionData()
+  }
 
   const handleStartSession = async () => {
     setStarting(true)
@@ -119,6 +127,8 @@ export default function StudentSessionDetailPage() {
 
       // Load tutor info
       if (bookingData.class?.tutor_id) {
+        setTutorId(bookingData.class.tutor_id)
+        
         const { data: tutorData } = await supabase
           .from('tutors')
           .select('user_id')
@@ -196,6 +206,7 @@ export default function StudentSessionDetailPage() {
 
   const canJoin = session.classroom_id && (session.status === 'scheduled' || session.status === 'rescheduled')
   const canStart = !session.classroom_id && !isCompleted && (session.status === 'scheduled' || session.status === 'rescheduled')
+  const canReschedule = !isCompleted && (session.status === 'scheduled' || session.status === 'rescheduled')
   const isCompleted = session.status === 'completed'
 
   return (
@@ -339,6 +350,16 @@ export default function StudentSessionDetailPage() {
                     </Link>
                   )}
                   
+                  {canReschedule && (
+                    <button
+                      onClick={() => setShowRescheduleModal(true)}
+                      className="w-full btn-secondary flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Request Reschedule
+                    </button>
+                  )}
+                  
                   {!canJoin && !canStart && !isCompleted && (
                     <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-lg">
                       Session is being prepared. Refresh the page to check status.
@@ -374,6 +395,24 @@ export default function StudentSessionDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Reschedule Modal */}
+        {showRescheduleModal && tutorId && session && (
+          <SessionRescheduleModal
+            bookingId={bookingId}
+            sessionId={sessionId}
+            currentSession={{
+              scheduled_date: session.scheduled_date,
+              scheduled_time: session.scheduled_time,
+              scheduled_day: session.scheduled_day
+            }}
+            tutorId={tutorId}
+            onClose={() => setShowRescheduleModal(false)}
+            onSuccess={handleRescheduleSuccess}
+            currentUserId={profile?.id || ''}
+            userRole="student"
+          />
+        )}
       </DashboardLayout>
     </ProtectedRoute>
   )

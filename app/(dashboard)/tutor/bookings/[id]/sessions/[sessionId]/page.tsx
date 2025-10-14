@@ -9,6 +9,7 @@ import SessionNotesForm from '@/components/SessionNotesForm'
 import SessionNotesView from '@/components/SessionNotesView'
 import MaterialsList from '@/components/MaterialsList'
 import FileUpload from '@/components/FileUpload'
+import SessionRescheduleModal from '@/components/SessionRescheduleModal'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { 
@@ -42,12 +43,7 @@ export default function TutorSessionDetailPage() {
   const [tutorId, setTutorId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [showNotesForm, setShowNotesForm] = useState(false)
-  const [showReschedule, setShowReschedule] = useState(false)
-  const [rescheduleData, setRescheduleData] = useState({
-    date: '',
-    time: '',
-    day: ''
-  })
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false)
 
   useEffect(() => {
     loadSessionData()
@@ -120,15 +116,6 @@ export default function TutorSessionDetailPage() {
         .single()
 
       setNotes(notesData)
-
-      // Initialize reschedule data
-      if (sessionData) {
-        setRescheduleData({
-          date: sessionData.scheduled_date,
-          time: sessionData.scheduled_time,
-          day: sessionData.scheduled_day
-        })
-      }
     } catch (error) {
       console.error('Error loading session:', error)
       toast.error('Failed to load session details')
@@ -205,21 +192,9 @@ export default function TutorSessionDetailPage() {
     }
   }
 
-  const handleReschedule = async () => {
-    try {
-      await rescheduleSession(
-        sessionId,
-        rescheduleData.date,
-        rescheduleData.time,
-        rescheduleData.day
-      )
-      toast.success('Session rescheduled successfully')
-      setShowReschedule(false)
-      loadSessionData()
-    } catch (error) {
-      console.error('Error rescheduling session:', error)
-      toast.error('Failed to reschedule session')
-    }
+  const handleRescheduleSuccess = () => {
+    setShowRescheduleModal(false)
+    loadSessionData()
   }
 
   const handleMaterialUpload = async (file: File) => {
@@ -359,56 +334,6 @@ export default function TutorSessionDetailPage() {
                   </div>
                 </div>
 
-                {/* Reschedule Form */}
-                {showReschedule && (
-                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                    <h3 className="font-semibold mb-3">Reschedule Session</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="label">New Date</label>
-                        <input
-                          type="date"
-                          value={rescheduleData.date}
-                          onChange={(e) => setRescheduleData({ ...rescheduleData, date: e.target.value })}
-                          className="input"
-                        />
-                      </div>
-                      <div>
-                        <label className="label">New Time</label>
-                        <input
-                          type="time"
-                          value={rescheduleData.time}
-                          onChange={(e) => setRescheduleData({ ...rescheduleData, time: e.target.value })}
-                          className="input"
-                        />
-                      </div>
-                      <div>
-                        <label className="label">Day of Week</label>
-                        <select
-                          value={rescheduleData.day}
-                          onChange={(e) => setRescheduleData({ ...rescheduleData, day: e.target.value })}
-                          className="input"
-                        >
-                          <option value="Monday">Monday</option>
-                          <option value="Tuesday">Tuesday</option>
-                          <option value="Wednesday">Wednesday</option>
-                          <option value="Thursday">Thursday</option>
-                          <option value="Friday">Friday</option>
-                          <option value="Saturday">Saturday</option>
-                          <option value="Sunday">Sunday</option>
-                        </select>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={handleReschedule} className="btn-primary">
-                          Confirm Reschedule
-                        </button>
-                        <button onClick={() => setShowReschedule(false)} className="btn-secondary">
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Session Materials */}
@@ -512,13 +437,13 @@ export default function TutorSessionDetailPage() {
                     </button>
                   )}
                   
-                  {!showReschedule && canStartSession && (
+                  {canStartSession && (
                     <button
-                      onClick={() => setShowReschedule(true)}
+                      onClick={() => setShowRescheduleModal(true)}
                       className="w-full btn-secondary flex items-center justify-center gap-2"
                     >
                       <Calendar className="w-4 h-4" />
-                      Reschedule
+                      Request Reschedule
                     </button>
                   )}
                   
@@ -553,6 +478,24 @@ export default function TutorSessionDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Reschedule Modal */}
+        {showRescheduleModal && tutorId && session && (
+          <SessionRescheduleModal
+            bookingId={bookingId}
+            sessionId={sessionId}
+            currentSession={{
+              scheduled_date: session.scheduled_date,
+              scheduled_time: session.scheduled_time,
+              scheduled_day: session.scheduled_day
+            }}
+            tutorId={tutorId}
+            onClose={() => setShowRescheduleModal(false)}
+            onSuccess={handleRescheduleSuccess}
+            currentUserId={profile?.id || ''}
+            userRole="tutor"
+          />
+        )}
       </DashboardLayout>
     </ProtectedRoute>
   )
