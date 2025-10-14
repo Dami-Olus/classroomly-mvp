@@ -306,7 +306,7 @@ export default function StudentBookingDetailPage() {
                   with {tutorName} • {booking.class.subject}
                 </p>
               </div>
-              {canJoinClassroom && (
+              {canJoinClassroom && booking.classroom && (
                 <Link
                   href={`/classroom/${booking.classroom.room_url}`}
                   className="btn-primary flex items-center gap-2"
