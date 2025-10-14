@@ -359,6 +359,7 @@ export default function TutorSessionDetailPage() {
                 
                 <div className="mt-4">
                   <MaterialsList
+                    bookingId={bookingId}
                     materials={materials}
                     onDelete={handleMaterialDeleted}
                   />

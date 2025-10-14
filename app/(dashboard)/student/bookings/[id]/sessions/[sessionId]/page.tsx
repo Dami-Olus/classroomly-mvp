@@ -220,7 +220,10 @@ export default function StudentSessionDetailPage() {
                 <h2 className="text-xl font-semibold mb-4">Session Materials</h2>
                 
                 {materials.length > 0 ? (
-                  <MaterialsList materials={materials} />
+                  <MaterialsList 
+                    bookingId={bookingId}
+                    materials={materials} 
+                  />
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <p>No materials uploaded yet</p>
