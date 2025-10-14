@@ -1,0 +1,307 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import Link from 'next/link'
+import ProtectedRoute from '@/components/ProtectedRoute'
+import DashboardLayout from '@/components/DashboardLayout'
+import SessionNotesView from '@/components/SessionNotesView'
+import MaterialsList from '@/components/MaterialsList'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
+import { 
+  Calendar, 
+  Clock, 
+  User, 
+  BookOpen, 
+  Video,
+  ArrowLeft,
+  Mail
+} from 'lucide-react'
+import toast from 'react-hot-toast'
+import { formatSessionDateTime, getSessionStatusColor } from '@/lib/sessions'
+
+export default function StudentSessionDetailPage() {
+  const params = useParams()
+  const { profile } = useAuth()
+  const supabase = createClient()
+  
+  const bookingId = params.id as string
+  const sessionId = params.sessionId as string
+  
+  const [session, setSession] = useState<any>(null)
+  const [booking, setBooking] = useState<any>(null)
+  const [materials, setMaterials] = useState<any[]>([])
+  const [notes, setNotes] = useState<any>(null)
+  const [tutor, setTutor] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadSessionData()
+  }, [sessionId])
+
+  const loadSessionData = async () => {
+    try {
+      // Load session
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single()
+
+      if (sessionError) throw sessionError
+      setSession(sessionData)
+
+      // Load booking with class info
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          class:classes(
+            title,
+            subject,
+            duration,
+            tutor_id
+          )
+        `)
+        .eq('id', bookingId)
+        .single()
+
+      if (bookingError) throw bookingError
+      setBooking(bookingData)
+
+      // Load tutor info
+      if (bookingData.class?.tutor_id) {
+        const { data: tutorData } = await supabase
+          .from('tutors')
+          .select('user_id')
+          .eq('id', bookingData.class.tutor_id)
+          .single()
+
+        if (tutorData?.user_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('id', tutorData.user_id)
+            .single()
+
+          setTutor(profileData)
+        }
+      }
+
+      // Load session materials
+      const { data: materialsData } = await supabase
+        .from('session_materials')
+        .select('*')
+        .eq('session_id', sessionId)
+
+      setMaterials(materialsData || [])
+
+      // Load session notes (excluding private notes for students)
+      const { data: notesData } = await supabase
+        .from('session_notes')
+        .select('*')
+        .eq('session_id', sessionId)
+        .single()
+
+      setNotes(notesData)
+    } catch (error) {
+      console.error('Error loading session:', error)
+      toast.error('Failed to load session details')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <ProtectedRoute requiredRole="student">
+        <DashboardLayout>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    )
+  }
+
+  if (!session || !booking) {
+    return (
+      <ProtectedRoute requiredRole="student">
+        <DashboardLayout>
+          <div className="text-center py-12">
+            <p className="text-gray-600">Session not found</p>
+            <Link href={`/student/bookings/${bookingId}`} className="btn-primary mt-4">
+              Back to Booking
+            </Link>
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    )
+  }
+
+  const canJoin = session.classroom_id && (session.status === 'scheduled' || session.status === 'rescheduled')
+  const isCompleted = session.status === 'completed'
+
+  return (
+    <ProtectedRoute requiredRole="student">
+      <DashboardLayout>
+        <div>
+          {/* Header */}
+          <div className="mb-6">
+            <Link 
+              href={`/student/bookings/${bookingId}`}
+              className="text-primary-600 hover:text-primary-700 inline-flex items-center gap-2 mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Booking
+            </Link>
+            
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  Session {session.session_number}
+                </h1>
+                <p className="text-gray-600">{booking.class.title}</p>
+              </div>
+              
+              <span className={`px-4 py-2 rounded-full font-medium ${getSessionStatusColor(session.status)}`}>
+                {session.status}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Session Details */}
+              <div className="card">
+                <h2 className="text-xl font-semibold mb-4">Session Details</h2>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-gray-700">
+                    <Calendar className="w-5 h-5 text-gray-400" />
+                    <span className="font-medium">Date:</span>
+                    <span>{formatSessionDateTime(session.scheduled_date, session.scheduled_time, session.scheduled_day)}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 text-gray-700">
+                    <Clock className="w-5 h-5 text-gray-400" />
+                    <span className="font-medium">Duration:</span>
+                    <span>{session.duration} minutes</span>
+                  </div>
+                  
+                  {tutor && (
+                    <>
+                      <div className="flex items-center gap-3 text-gray-700">
+                        <User className="w-5 h-5 text-gray-400" />
+                        <span className="font-medium">Tutor:</span>
+                        <span>{tutor.first_name} {tutor.last_name}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 text-gray-700">
+                        <Mail className="w-5 h-5 text-gray-400" />
+                        <span className="font-medium">Contact:</span>
+                        <span>{tutor.email}</span>
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="flex items-center gap-3 text-gray-700">
+                    <BookOpen className="w-5 h-5 text-gray-400" />
+                    <span className="font-medium">Subject:</span>
+                    <span>{booking.class.subject}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Session Materials */}
+              <div className="card">
+                <h2 className="text-xl font-semibold mb-4">Session Materials</h2>
+                
+                {materials.length > 0 ? (
+                  <MaterialsList materials={materials} />
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No materials uploaded yet</p>
+                    <p className="text-sm mt-2">Your tutor will upload materials here</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Session Notes */}
+              {notes && (
+                <div className="card">
+                  <h2 className="text-xl font-semibold mb-4">Session Notes</h2>
+                  <SessionNotesView notes={notes} showPrivateNotes={false} />
+                </div>
+              )}
+
+              {!notes && isCompleted && (
+                <div className="card">
+                  <h2 className="text-xl font-semibold mb-4">Session Notes</h2>
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No notes added yet</p>
+                    <p className="text-sm mt-2">Your tutor will add notes after the session</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Actions */}
+              <div className="card">
+                <h3 className="font-semibold mb-4">Actions</h3>
+                <div className="space-y-2">
+                  {canJoin && (
+                    <Link
+                      href={`/classroom/${session.classroom_id}`}
+                      target="_blank"
+                      className="w-full btn-primary flex items-center justify-center gap-2"
+                    >
+                      <Video className="w-4 h-4" />
+                      Join Classroom
+                    </Link>
+                  )}
+                  
+                  {!canJoin && !isCompleted && (
+                    <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-lg">
+                      Your tutor will start the session. You'll be able to join when it's ready.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Info */}
+              <div className="card bg-primary-50 border-primary-200">
+                <h3 className="font-semibold text-primary-900 mb-3">Quick Info</h3>
+                <div className="space-y-2 text-sm text-primary-800">
+                  <p>Session: {session.session_number} of {booking.total_sessions || 'ongoing'}</p>
+                  <p>Status: {session.status}</p>
+                  {isCompleted && session.completed_at && (
+                    <p>Completed: {new Date(session.completed_at).toLocaleDateString()}</p>
+                  )}
+                  {session.cancellation_reason && (
+                    <p className="text-red-700">
+                      <strong>Cancellation:</strong> {session.cancellation_reason}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Help */}
+              <div className="card bg-blue-50 border-blue-200">
+                <h3 className="font-semibold text-blue-900 mb-2">Need Help?</h3>
+                <p className="text-sm text-blue-800">
+                  If you need to reschedule or have questions, please contact your tutor directly.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    </ProtectedRoute>
+  )
+}
+
