@@ -125,6 +125,46 @@ export const useDailyCall = () => {
         toast.success('Left the classroom')
       }
 
+      const handleParticipantJoined = (event: any) => {
+        console.log('Participant joined:', event.participant)
+        if (callFrame) {
+          const participantList = Object.values(callFrame.participants())
+          setState(prev => ({ ...prev, participants: participantList }))
+        }
+        
+        // Show notification when someone joins
+        if (event.participant && !event.participant.local) {
+          const name = event.participant.user_name || 'A participant'
+          toast.success(`${name} joined the classroom`)
+          
+          // Browser notification if permissions granted
+          if (typeof window !== 'undefined' && 'Notification' in window) {
+            if (Notification.permission === 'granted') {
+              new Notification('Student Joined', {
+                body: `${name} has joined the classroom`,
+                icon: '/logo.png',
+                tag: 'student-join',
+              })
+            } else if (Notification.permission === 'default') {
+              Notification.requestPermission()
+            }
+          }
+        }
+      }
+
+      const handleParticipantLeft = (event: any) => {
+        console.log('Participant left:', event.participant)
+        if (callFrame) {
+          const participantList = Object.values(callFrame.participants())
+          setState(prev => ({ ...prev, participants: participantList }))
+        }
+        
+        if (event.participant && !event.participant.local) {
+          const name = event.participant.user_name || 'A participant'
+          toast.info(`${name} left the classroom`)
+        }
+      }
+
       const handleParticipantUpdate = () => {
         if (callFrame) {
           const participantList = Object.values(callFrame.participants())
@@ -145,8 +185,8 @@ export const useDailyCall = () => {
       // Attach event listeners
       callFrame.on('joined-meeting', handleJoinedMeeting)
       callFrame.on('left-meeting', handleLeftMeeting)
-      callFrame.on('participant-joined', handleParticipantUpdate)
-      callFrame.on('participant-left', handleParticipantUpdate)
+      callFrame.on('participant-joined', handleParticipantJoined)
+      callFrame.on('participant-left', handleParticipantLeft)
       callFrame.on('participant-updated', handleParticipantUpdate)
       callFrame.on('error', handleError)
 

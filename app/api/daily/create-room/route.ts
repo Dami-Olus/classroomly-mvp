@@ -73,9 +73,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateRoo
         properties: {
           enable_screenshare: true,
           enable_chat: true,
-          enable_knocking: false,
+          enable_knocking: true, // Enable waiting room
+          enable_prejoin_ui: true, // Show preview before joining
+          enable_recording: 'cloud', // Allow recording
+          enable_emoji_reactions: true,
           start_video_off: false,
           start_audio_off: false,
+          owner_only_broadcast: false, // Allow all to broadcast
           max_participants: 10,
           exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
         },
