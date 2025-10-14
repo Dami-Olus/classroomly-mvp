@@ -49,11 +49,10 @@ export default function TutorSessionDetailPage() {
     loadSessionData()
   }, [sessionId])
 
-  const loadSessionData = async () => {
-    try {
-      // Get tutor ID for current user (always fetch fresh)
-      let currentTutorId = tutorId
-      if (profile && !currentTutorId) {
+  // Load tutor ID once when component mounts
+  useEffect(() => {
+    const fetchTutorId = async () => {
+      if (profile && !tutorId) {
         const { data: tutorData } = await supabase
           .from('tutors')
           .select('id')
@@ -61,11 +60,15 @@ export default function TutorSessionDetailPage() {
           .single()
         
         if (tutorData) {
-          currentTutorId = tutorData.id
           setTutorId(tutorData.id)
         }
       }
+    }
+    fetchTutorId()
+  }, [profile])
 
+  const loadSessionData = async () => {
+    try {
       // Load session with classroom info
       // Use !sessions_classroom_id_fkey to specify which relationship to use
       const { data: sessionData, error: sessionError } = await supabase
