@@ -39,6 +39,21 @@ ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES bookings(id) ON DELETE CASCA
 ADD COLUMN IF NOT EXISTS session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
 ADD COLUMN IF NOT EXISTS class_id UUID REFERENCES classes(id) ON DELETE CASCADE;
 
+-- Rename uploader_id to uploaded_by for consistency with session_materials
+-- First check if uploader_id exists and uploaded_by doesn't
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'materials' AND column_name = 'uploader_id'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'materials' AND column_name = 'uploaded_by'
+  ) THEN
+    ALTER TABLE materials RENAME COLUMN uploader_id TO uploaded_by;
+  END IF;
+END $$;
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_materials_booking_id ON materials(booking_id);
 CREATE INDEX IF NOT EXISTS idx_materials_session_id ON materials(session_id);
