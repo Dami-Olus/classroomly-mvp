@@ -142,15 +142,6 @@ export const useDailyCall = () => {
         toast.error(event.errorMsg || 'Connection error occurred')
       }
 
-      // Handle when the call frame is ready (interface loaded)
-      const handleCallFrameReady = () => {
-        console.log('Call frame ready - hiding connecting modal')
-        setState(prev => ({ 
-          ...prev, 
-          isConnecting: false 
-        }))
-      }
-
       // Attach event listeners
       callFrame.on('joined-meeting', handleJoinedMeeting)
       callFrame.on('left-meeting', handleLeftMeeting)
@@ -158,12 +149,6 @@ export const useDailyCall = () => {
       callFrame.on('participant-left', handleParticipantUpdate)
       callFrame.on('participant-updated', handleParticipantUpdate)
       callFrame.on('error', handleError)
-      
-      // Listen for when the call frame is ready
-      callFrame.on('call-frame-ready', handleCallFrameReady)
-      
-      // Also listen for when the iframe loads
-      callFrame.on('iframe-ready', handleCallFrameReady)
 
       // Join the call
       const joinConfig: any = {
