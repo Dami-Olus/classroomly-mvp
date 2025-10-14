@@ -49,11 +49,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: BookOpen,
     },
     {
-      href: '/tutor/classes/create',
-      label: 'Create Class',
-      icon: PlusCircle,
-    },
-    {
       href: '/tutor/bookings',
       label: 'Bookings',
       icon: Calendar,
