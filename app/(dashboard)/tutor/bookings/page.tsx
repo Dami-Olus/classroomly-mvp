@@ -4,20 +4,38 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
+import SessionsList from '@/components/SessionsList'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
-import { Calendar, Clock, User, Mail, BookOpen, Video, ExternalLink } from 'lucide-react'
+import { Calendar, User, Mail, BookOpen, FileText, BarChart } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { formatDate, formatTime } from '@/lib/utils'
-import type { BookingWithDetails } from '@/types'
+import { getBookingSessions, getSessionStats } from '@/lib/sessions'
+
+interface BookingWithSessions {
+  id: string
+  student_name: string
+  student_email: string
+  status: string
+  notes: string | null
+  total_sessions: number
+  start_date: string
+  created_at: string
+  class: {
+    title: string
+    subject: string
+    duration: number
+  }
+  sessions?: any[]
+  stats?: any
+}
 
 export default function TutorBookingsPage() {
   const { profile } = useAuth()
   const supabase = createClient()
-  const [bookings, setBookings] = useState<BookingWithDetails[]>([])
-  const [classrooms, setClassrooms] = useState<any[]>([])
+  const [bookings, setBookings] = useState<BookingWithSessions[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'completed' | 'cancelled'>('all')
+  const [expandedBooking, setExpandedBooking] = useState<string | null>(null)
 
   useEffect(() => {
     loadBookings()
@@ -62,23 +80,20 @@ export default function TutorBookingsPage() {
 
       if (error) throw error
 
-      // Load classrooms for these bookings
-      const { data: classroomsData, error: classroomsError } = await supabase
-        .from('classrooms')
-        .select(`
-          *,
-          booking:bookings(
-            id,
-            student_id,
-            status
-          )
-        `)
-        .in('booking_id', data?.map(b => b.id) || [])
+      // Load sessions and stats for each booking
+      const bookingsWithSessions = await Promise.all(
+        (data || []).map(async (booking: any) => {
+          const sessions = await getBookingSessions(booking.id)
+          const stats = await getSessionStats(booking.id)
+          return {
+            ...booking,
+            sessions,
+            stats,
+          }
+        })
+      )
 
-      if (classroomsError) throw classroomsError
-
-      setBookings(data as any || [])
-      setClassrooms(classroomsData || [])
+      setBookings(bookingsWithSessions as any)
     } catch (error) {
       console.error('Error loading bookings:', error)
       toast.error('Failed to load bookings')
@@ -87,8 +102,36 @@ export default function TutorBookingsPage() {
     }
   }
 
-  const joinClassroom = (roomUrl: string) => {
-    window.open(`/classroom/${roomUrl}`, '_blank')
+  const handleStartSession = async (sessionId: string) => {
+    try {
+      // Create classroom for this session
+      const { data: classroom, error } = await supabase
+        .from('classrooms')
+        .insert({
+          session_id: sessionId,
+          status: 'scheduled',
+          room_url: Math.random().toString(36).substring(2, 14),
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Update session with classroom_id
+      await supabase
+        .from('sessions')
+        .update({ classroom_id: classroom.id })
+        .eq('id', sessionId)
+
+      toast.success('Classroom created! Opening...')
+      window.open(`/classroom/${classroom.room_url}`, '_blank')
+      
+      // Reload bookings to show updated classroom
+      loadBookings()
+    } catch (error) {
+      console.error('Error starting session:', error)
+      toast.error('Failed to start session')
+    }
   }
 
   const filteredBookings = bookings.filter((booking) => {
@@ -99,200 +142,180 @@ export default function TutorBookingsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return 'bg-green-100 text-green-700'
+        return 'bg-green-100 text-green-800'
       case 'completed':
-        return 'bg-blue-100 text-blue-700'
+        return 'bg-blue-100 text-blue-800'
       case 'cancelled':
-        return 'bg-red-100 text-red-700'
-      case 'rescheduled':
-        return 'bg-yellow-100 text-yellow-700'
+        return 'bg-red-100 text-red-800'
       default:
-        return 'bg-secondary-100 text-secondary-700'
+        return 'bg-gray-100 text-gray-800'
     }
-  }
-
-  if (loading) {
-    return (
-      <ProtectedRoute requiredRole="tutor">
-        <DashboardLayout>
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-              <p className="text-secondary-600">Loading bookings...</p>
-            </div>
-          </div>
-        </DashboardLayout>
-      </ProtectedRoute>
-    )
   }
 
   return (
     <ProtectedRoute requiredRole="tutor">
       <DashboardLayout>
         <div>
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-secondary-900 mb-2">
-              Bookings
-            </h1>
-            <p className="text-secondary-600">
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Bookings</h1>
+            <p className="text-gray-600">
               Manage your student bookings and sessions
             </p>
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-2 mb-6 overflow-x-auto">
-            {[
-              { key: 'all', label: 'All' },
-              { key: 'confirmed', label: 'Confirmed' },
-              { key: 'completed', label: 'Completed' },
-              { key: 'cancelled', label: 'Cancelled' },
-            ].map((tab) => (
+          <div className="flex gap-2 mb-6 flex-wrap">
+            {['all', 'confirmed', 'completed', 'cancelled'].map((status) => (
               <button
-                key={tab.key}
-                onClick={() => setFilter(tab.key as any)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                  filter === tab.key
+                key={status}
+                onClick={() => setFilter(status as any)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  filter === status
                     ? 'bg-primary-600 text-white'
-                    : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
                 }`}
               >
-                {tab.label}
-                <span className="ml-2 text-sm">
-                  (
-                  {tab.key === 'all'
-                    ? bookings.length
-                    : bookings.filter((b) => b.status === tab.key).length}
-                  )
-                </span>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+                {status === 'all' && ` (${bookings.length})`}
+                {status !== 'all' && ` (${bookings.filter((b) => b.status === status).length})`}
               </button>
             ))}
           </div>
 
-          {filteredBookings.length === 0 ? (
-            <div className="card text-center py-12">
-              <Calendar className="w-16 h-16 text-secondary-300 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-secondary-900 mb-2">
-                No bookings yet
-              </h2>
-              <p className="text-secondary-600">
-                {filter === 'all'
-                  ? 'Share your class links to start receiving bookings'
-                  : `No ${filter} bookings`}
-              </p>
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredBookings.map((booking) => {
-                const classInfo = booking.class as any
-                const slots = booking.scheduled_slots as any[]
+          )}
 
-                return (
-                  <div key={booking.id} className="card">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-secondary-900">
-                            {classInfo?.title || 'Unknown Class'}
-                          </h3>
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                              booking.status
-                            )}`}
-                          >
-                            {booking.status}
-                          </span>
-                        </div>
-                        <p className="text-secondary-600 text-sm">
-                          {classInfo?.subject} • {classInfo?.duration} minutes
-                        </p>
+          {/* Empty State */}
+          {!loading && filteredBookings.length === 0 && (
+            <div className="text-center py-12">
+              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No bookings found
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {filter === 'all'
+                  ? 'When students book your classes, they will appear here'
+                  : `No ${filter} bookings at the moment`}
+              </p>
+              <Link href="/tutor/classes" className="btn-primary">
+                View My Classes
+              </Link>
+            </div>
+          )}
+
+          {/* Bookings List */}
+          {!loading && filteredBookings.length > 0 && (
+            <div className="space-y-6">
+              {filteredBookings.map((booking) => (
+                <div key={booking.id} className="card">
+                  {/* Booking Header */}
+                  <div className="flex items-start justify-between mb-4 pb-4 border-b">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h2 className="text-xl font-semibold text-gray-900">
+                          {booking.class.title}
+                        </h2>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(booking.status)}`}>
+                          {booking.status}
+                        </span>
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <div className="flex items-center gap-2 text-secondary-600 mb-2">
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
                           <User className="w-4 h-4" />
-                          <span className="font-medium">
-                            {booking.student_name}
-                          </span>
+                          <span>{booking.student_name}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-secondary-600">
+                        <div className="flex items-center gap-2">
                           <Mail className="w-4 h-4" />
-                          <span className="text-sm">{booking.student_email}</span>
+                          <span>{booking.student_email}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="w-4 h-4" />
+                          <span>{booking.class.subject}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>Started: {new Date(booking.start_date).toLocaleDateString()}</span>
                         </div>
                       </div>
 
-                      <div>
-                        <p className="text-sm text-secondary-600 mb-1">
-                          Booked:{' '}
-                          <span className="font-medium">
-                            {formatDate(booking.created_at || '')}
-                          </span>
-                        </p>
-                        <p className="text-sm text-secondary-600">
-                          Sessions:{' '}
-                          <span className="font-medium">
-                            {booking.completed_sessions} / {booking.total_sessions} completed
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Start Session Button */}
-                    {(() => {
-                      const classroom = classrooms.find(c => c.booking_id === booking.id)
-                      return classroom && (
-                        <div className="mb-4">
-                          <button
-                            onClick={() => joinClassroom(classroom.room_url)}
-                            className="btn-primary flex items-center gap-2 w-full justify-center"
-                          >
-                            <Video className="w-4 h-4" />
-                            Start Session
-                            <ExternalLink className="w-4 h-4" />
-                          </button>
+                      {booking.notes && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-700">
+                            <strong>Notes:</strong> {booking.notes}
+                          </p>
                         </div>
-                      )
-                    })()}
-
-                    {/* Scheduled Slots */}
-                    <div className="bg-secondary-50 rounded-lg p-4">
-                      <p className="text-sm font-medium text-secondary-900 mb-2">
-                        Scheduled Sessions:
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {slots.map((slot, index) => (
-                          <div
-                            key={index}
-                            className="bg-white px-3 py-1 rounded-lg text-sm"
-                          >
-                            <span className="font-medium">{slot.day}</span> at{' '}
-                            <span className="text-primary-600">{slot.time}</span>
-                          </div>
-                        ))}
-                      </div>
+                      )}
                     </div>
 
-                    {booking.notes && (
-                      <div className="mt-4 pt-4 border-t">
-                        <p className="text-sm text-secondary-600">
-                          <strong>Student Notes:</strong> {booking.notes}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* View Details Button */}
-                    <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center gap-2">
                       <Link
                         href={`/tutor/bookings/${booking.id}`}
-                        className="btn-secondary w-full text-center"
+                        className="btn-secondary text-sm flex items-center gap-2"
                       >
-                        View Details & Materials
+                        <FileText className="w-4 h-4" />
+                        Full Details
+                      </Link>
+                      
+                      <Link
+                        href={`/tutor/bookings/${booking.id}/reports`}
+                        className="btn-secondary text-sm flex items-center gap-2"
+                      >
+                        <BarChart className="w-4 h-4" />
+                        Reports
                       </Link>
                     </div>
                   </div>
-                )
-              })}
+
+                  {/* Session Stats */}
+                  {booking.stats && (
+                    <div className="grid grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-gray-900">{booking.stats.total}</p>
+                        <p className="text-sm text-gray-600">Total Sessions</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-green-600">{booking.stats.completed}</p>
+                        <p className="text-sm text-gray-600">Completed</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-blue-600">{booking.stats.scheduled}</p>
+                        <p className="text-sm text-gray-600">Scheduled</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-purple-600">{booking.stats.totalHours}h</p>
+                        <p className="text-sm text-gray-600">Total Hours</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sessions List */}
+                  {booking.sessions && (
+                    <div className="mt-4">
+                      <button
+                        onClick={() => setExpandedBooking(expandedBooking === booking.id ? null : booking.id)}
+                        className="text-sm font-medium text-primary-600 hover:text-primary-700 mb-3"
+                      >
+                        {expandedBooking === booking.id ? '▼ Hide Sessions' : '▶ Show All Sessions'}
+                      </button>
+                      
+                      {expandedBooking === booking.id && (
+                        <SessionsList
+                          sessions={booking.sessions}
+                          bookingId={booking.id}
+                          role="tutor"
+                          onStartSession={handleStartSession}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -300,4 +323,3 @@ export default function TutorBookingsPage() {
     </ProtectedRoute>
   )
 }
-
