@@ -41,9 +41,27 @@ export default function MaterialsList({
   const handleDownload = async (material: Material) => {
     setDownloadingId(material.id)
     try {
-      await downloadFile(material.file_url, material.file_name)
+      // Extract file path from URL or use stored path
+      const urlParts = material.file_url.split('/materials/')
+      const filePath = urlParts[1] ? decodeURIComponent(urlParts[1].split('?')[0]) : ''
+      
+      if (!filePath) {
+        throw new Error('Invalid file path')
+      }
+
+      // Generate fresh signed URL for download
+      const { data, error } = await supabase.storage
+        .from('materials')
+        .createSignedUrl(filePath, 60) // 60 seconds expiry for download
+
+      if (error) throw error
+      if (!data?.signedUrl) throw new Error('Failed to generate download URL')
+
+      // Download using the signed URL
+      await downloadFile(data.signedUrl, material.file_name)
       toast.success('Download started!')
     } catch (error: any) {
+      console.error('Download error:', error)
       toast.error(error.message || 'Failed to download file')
     } finally {
       setDownloadingId(null)

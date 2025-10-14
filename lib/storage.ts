@@ -81,13 +81,18 @@ export const uploadFile = async (
     throw new Error(`Failed to upload file: ${error.message}`)
   }
 
-  // Get public URL
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from('materials').getPublicUrl(data.path)
+  // Get signed URL for private bucket (expires in 1 year)
+  const { data: signedUrlData, error: urlError } = await supabase.storage
+    .from('materials')
+    .createSignedUrl(data.path, 31536000) // 1 year expiry
+
+  if (urlError) {
+    console.error('Error creating signed URL:', urlError)
+    throw new Error(`Failed to generate file URL: ${urlError.message}`)
+  }
 
   return {
-    url: publicUrl,
+    url: signedUrlData.signedUrl,
     path: data.path,
     fileName: file.name,
     fileSize: file.size,
