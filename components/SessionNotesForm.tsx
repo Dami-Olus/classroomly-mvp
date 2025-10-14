@@ -18,6 +18,7 @@ interface SessionNote {
 
 interface SessionNotesFormProps {
   bookingId: string
+  sessionId?: string  // Optional for backwards compatibility
   tutorId: string
   existingNote?: SessionNote | null
   onSave: () => void
@@ -26,6 +27,7 @@ interface SessionNotesFormProps {
 
 export default function SessionNotesForm({
   bookingId,
+  sessionId,
   tutorId,
   existingNote,
   onSave,
@@ -87,7 +89,7 @@ export default function SessionNotesForm({
     setSaving(true)
 
     try {
-      const noteData = {
+      const noteData: any = {
         booking_id: bookingId,
         tutor_id: tutorId,
         content: formData.content.trim(),
@@ -97,6 +99,11 @@ export default function SessionNotesForm({
         strengths: formData.strengths.trim() || null,
         areas_for_improvement: formData.areas_for_improvement.trim() || null,
         private_notes: formData.private_notes.trim() || null,
+      }
+
+      // Add session_id if provided (for new session-based structure)
+      if (sessionId) {
+        noteData.session_id = sessionId
       }
 
       if (existingNote?.id) {

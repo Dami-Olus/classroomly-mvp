@@ -236,7 +236,7 @@ export default function StudentSessionDetailPage() {
               {notes && (
                 <div className="card">
                   <h2 className="text-xl font-semibold mb-4">Session Notes</h2>
-                  <SessionNotesView notes={notes} showPrivateNotes={false} />
+                  <SessionNotesView note={notes} showPrivateNotes={false} />
                 </div>
               )}
 

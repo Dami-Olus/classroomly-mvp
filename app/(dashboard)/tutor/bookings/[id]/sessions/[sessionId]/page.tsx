@@ -39,6 +39,7 @@ export default function TutorSessionDetailPage() {
   const [booking, setBooking] = useState<any>(null)
   const [materials, setMaterials] = useState<any[]>([])
   const [notes, setNotes] = useState<any>(null)
+  const [tutorId, setTutorId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [showNotesForm, setShowNotesForm] = useState(false)
   const [showReschedule, setShowReschedule] = useState(false)
@@ -54,6 +55,19 @@ export default function TutorSessionDetailPage() {
 
   const loadSessionData = async () => {
     try {
+      // Get tutor ID for current user
+      if (profile && !tutorId) {
+        const { data: tutorData } = await supabase
+          .from('tutors')
+          .select('id')
+          .eq('user_id', profile.id)
+          .single()
+        
+        if (tutorData) {
+          setTutorId(tutorData.id)
+        }
+      }
+
       // Load session
       const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
@@ -190,8 +204,37 @@ export default function TutorSessionDetailPage() {
     }
   }
 
-  const handleMaterialUploaded = () => {
-    loadSessionData()
+  const handleMaterialUpload = async (file: File) => {
+    if (!profile) return
+    
+    try {
+      const { uploadFile } = await import('@/lib/storage')
+      
+      // Upload file to storage
+      const result = await uploadFile(file, bookingId, profile.id)
+      
+      // Save material reference to database
+      const { error } = await supabase
+        .from('materials')
+        .insert({
+          booking_id: bookingId,
+          session_id: sessionId,
+          file_name: result.fileName,
+          file_url: result.url,
+          file_size: result.fileSize,
+          file_type: result.fileType,
+          uploaded_by: profile.id,
+        })
+      
+      if (error) throw error
+      
+      toast.success('Material uploaded successfully!')
+      loadSessionData()
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      toast.error(error.message || 'Failed to upload file')
+      throw error // Re-throw so FileUpload can handle it
+    }
   }
 
   const handleMaterialDeleted = () => {
@@ -352,9 +395,7 @@ export default function TutorSessionDetailPage() {
                 <h2 className="text-xl font-semibold mb-4">Session Materials</h2>
                 
                 <FileUpload
-                  bookingId={bookingId}
-                  sessionId={sessionId}
-                  onUploadComplete={handleMaterialUploaded}
+                  onUpload={handleMaterialUpload}
                 />
                 
                 <div className="mt-4">
@@ -382,15 +423,22 @@ export default function TutorSessionDetailPage() {
                 </div>
 
                 {showNotesForm || !notes ? (
-                  <SessionNotesForm
-                    bookingId={bookingId}
-                    sessionId={sessionId}
-                    existingNotes={notes}
-                    onSave={handleNotesSaved}
-                    onCancel={() => setShowNotesForm(false)}
-                  />
+                  tutorId ? (
+                    <SessionNotesForm
+                      bookingId={bookingId}
+                      sessionId={sessionId}
+                      tutorId={tutorId}
+                      existingNote={notes}
+                      onSave={handleNotesSaved}
+                      onCancel={() => setShowNotesForm(false)}
+                    />
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>Loading...</p>
+                    </div>
+                  )
                 ) : (
-                  <SessionNotesView notes={notes} showPrivateNotes={true} />
+                  <SessionNotesView note={notes} showPrivateNotes={true} />
                 )}
               </div>
             </div>

@@ -239,16 +239,9 @@ export default function StudentBookingsPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {booking.scheduled_slots && booking.scheduled_slots.length > 0 && (
+                      {booking.sessions && booking.sessions.length > 0 && (
                         <AddToCalendarButton
-                          title={booking.class.title}
-                          description={`${booking.class.subject} tutoring session`}
-                          location="Online"
-                          startTime={booking.scheduled_slots[0].time}
-                          endTime={booking.class.duration ? 
-                            new Date(new Date(`2000-01-01T${booking.scheduled_slots[0].time}`).getTime() + booking.class.duration * 60000).toTimeString().slice(0, 5) : 
-                            ''}
-                          recurrence={`WEEKLY;BYDAY=${booking.scheduled_slots.map((s: any) => s.day.slice(0, 2).toUpperCase()).join(',')}`}
+                          sessions={booking.sessions}
                         />
                       )}
                       
