@@ -189,6 +189,11 @@ CREATE POLICY "Booking participants can update sessions"
 
 -- Class Notes Policies
 DROP POLICY IF EXISTS "Tutors can manage class notes" ON class_notes;
+DROP POLICY IF EXISTS "Tutors can create class notes" ON class_notes;
+DROP POLICY IF EXISTS "Tutors can view their class notes" ON class_notes;
+DROP POLICY IF EXISTS "Tutors can update their class notes" ON class_notes;
+DROP POLICY IF EXISTS "Tutors can delete their class notes" ON class_notes;
+DROP POLICY IF EXISTS "Students can view class notes" ON class_notes;
 
 CREATE POLICY "Tutors can create class notes"
   ON class_notes FOR INSERT
@@ -219,6 +224,10 @@ CREATE POLICY "Students can view class notes"
 -- ============================================
 -- Drop existing policies
 DROP POLICY IF EXISTS "Tutors can manage reports" ON class_reports;
+DROP POLICY IF EXISTS "Tutors can create reports" ON class_reports;
+DROP POLICY IF EXISTS "Tutors can view their reports" ON class_reports;
+DROP POLICY IF EXISTS "Tutors can update their reports" ON class_reports;
+DROP POLICY IF EXISTS "Tutors can delete their reports" ON class_reports;
 DROP POLICY IF EXISTS "Students can view shared reports" ON class_reports;
 
 -- Tutors can create and manage their reports
