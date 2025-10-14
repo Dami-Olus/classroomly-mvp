@@ -206,12 +206,12 @@ CREATE POLICY "Tutors can delete their class notes"
   ON class_notes FOR DELETE
   USING (tutor_id IN (SELECT id FROM tutors WHERE user_id = auth.uid()));
 
--- Students can view class notes for their bookings
+-- Students can view class notes for classes they're enrolled in
 CREATE POLICY "Students can view class notes"
   ON class_notes FOR SELECT
   USING (
-    booking_id IN (
-      SELECT id FROM bookings WHERE student_id = auth.uid()
+    class_id IN (
+      SELECT class_id FROM bookings WHERE student_id = auth.uid()
     )
   );
 
