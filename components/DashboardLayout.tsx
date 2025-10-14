@@ -22,6 +22,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { profile, signOut } = useAuth()
   const pathname = usePathname()
   const isTutor = profile?.role === 'tutor'
+  const isAdmin = profile?.role === 'admin'
+
+  const adminLinks = [
+    {
+      href: '/admin/dashboard',
+      label: 'Admin Dashboard',
+      icon: LayoutDashboard,
+    },
+  ]
 
   const tutorLinks = [
     {
@@ -74,7 +83,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     },
   ]
 
-  const links = isTutor ? tutorLinks : studentLinks
+  const links = isAdmin ? adminLinks : isTutor ? tutorLinks : studentLinks
 
   return (
     <div className="min-h-screen bg-secondary-50">
