@@ -467,7 +467,7 @@ export default function TutorSessionDetailPage() {
               <div className="card">
                 <h3 className="font-semibold mb-4">Actions</h3>
                 <div className="space-y-2">
-                  {canStartSession && !session.classroom_id && (
+                  {!session.classroom_id && canStartSession && (
                     <button
                       onClick={handleStartSession}
                       className="w-full btn-primary flex items-center justify-center gap-2"
@@ -477,14 +477,14 @@ export default function TutorSessionDetailPage() {
                     </button>
                   )}
                   
-                  {session.classroom_id && (
+                  {session.classroom_id && !isCompleted && (
                     <Link
                       href={`/classroom/${session.classroom_id}`}
                       target="_blank"
                       className="w-full btn-primary flex items-center justify-center gap-2"
                     >
                       <Video className="w-4 h-4" />
-                      Enter Classroom
+                      {canStartSession ? 'Enter Classroom' : 'Rejoin Classroom'}
                     </Link>
                   )}
                   

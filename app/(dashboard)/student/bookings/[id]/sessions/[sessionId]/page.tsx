@@ -35,10 +35,57 @@ export default function StudentSessionDetailPage() {
   const [notes, setNotes] = useState<any>(null)
   const [tutor, setTutor] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [starting, setStarting] = useState(false)
 
   useEffect(() => {
     loadSessionData()
   }, [sessionId])
+
+  const handleStartSession = async () => {
+    setStarting(true)
+    try {
+      if (!session) {
+        toast.error('Session data not loaded')
+        return
+      }
+
+      // Create classroom for this session
+      const sessionDateTime = new Date(`${session.scheduled_date}T${session.scheduled_time}`)
+      
+      const { data: classroom, error } = await supabase
+        .from('classrooms')
+        .insert({
+          session_id: sessionId,
+          booking_id: bookingId,
+          session_date: sessionDateTime.toISOString(),
+          status: 'scheduled',
+          room_url: Math.random().toString(36).substring(2, 14),
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Update session with classroom_id
+      await supabase
+        .from('sessions')
+        .update({ classroom_id: classroom.id })
+        .eq('id', sessionId)
+
+      toast.success('Session started! Joining classroom...')
+      
+      // Reload data to get updated classroom_id
+      await loadSessionData()
+      
+      // Open classroom in new tab
+      window.open(`/classroom/${classroom.id}`, '_blank')
+    } catch (error: any) {
+      console.error('Error starting session:', error)
+      toast.error(error.message || 'Failed to start session')
+    } finally {
+      setStarting(false)
+    }
+  }
 
   const loadSessionData = async () => {
     try {
@@ -141,6 +188,7 @@ export default function StudentSessionDetailPage() {
   }
 
   const canJoin = session.classroom_id && (session.status === 'scheduled' || session.status === 'rescheduled')
+  const canStart = !session.classroom_id && !isCompleted && (session.status === 'scheduled' || session.status === 'rescheduled')
   const isCompleted = session.status === 'completed'
 
   return (
@@ -257,6 +305,17 @@ export default function StudentSessionDetailPage() {
               <div className="card">
                 <h3 className="font-semibold mb-4">Actions</h3>
                 <div className="space-y-2">
+                  {canStart && (
+                    <button
+                      onClick={handleStartSession}
+                      disabled={starting}
+                      className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <Video className="w-4 h-4" />
+                      {starting ? 'Starting...' : 'Start Session'}
+                    </button>
+                  )}
+                  
                   {canJoin && (
                     <Link
                       href={`/classroom/${session.classroom_id}`}
@@ -268,9 +327,9 @@ export default function StudentSessionDetailPage() {
                     </Link>
                   )}
                   
-                  {!canJoin && !isCompleted && (
+                  {!canJoin && !canStart && !isCompleted && (
                     <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-lg">
-                      Your tutor will start the session. You'll be able to join when it's ready.
+                      Session is being prepared. Refresh the page to check status.
                     </div>
                   )}
                 </div>
