@@ -50,6 +50,11 @@ ADD COLUMN IF NOT EXISTS class_id UUID REFERENCES classes(id) ON DELETE CASCADE;
 ALTER TABLE materials
 ALTER COLUMN classroom_id DROP NOT NULL;
 
+-- Make uploader_name nullable (can be derived from uploaded_by -> profiles)
+-- This matches session_materials structure which doesn't have uploader_name
+ALTER TABLE materials
+ALTER COLUMN uploader_name DROP NOT NULL;
+
 -- Rename uploader_id to uploaded_by for consistency with session_materials
 -- First check if uploader_id exists and uploaded_by doesn't
 DO $$

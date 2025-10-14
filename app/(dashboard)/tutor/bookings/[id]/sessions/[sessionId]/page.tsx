@@ -225,6 +225,8 @@ export default function TutorSessionDetailPage() {
       const result = await uploadFile(file, bookingId, profile.id)
       
       // Save material reference to database
+      const uploaderName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown'
+      
       const { error } = await supabase
         .from('materials')
         .insert({
@@ -235,6 +237,7 @@ export default function TutorSessionDetailPage() {
           file_size: result.fileSize,
           file_type: result.fileType,
           uploaded_by: profile.id,
+          uploader_name: uploaderName,
         })
       
       if (error) throw error
