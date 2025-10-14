@@ -482,7 +482,7 @@ export default function PublicBookingPage() {
     if (!acc[slot.day]) acc[slot.day] = []
     acc[slot.day].push(slot)
     return acc
-  }, {} as Record<string, TimeSlot[]>)
+  }, {} as Record<string, BookableSlot[]>)
 
   const DAYS_ORDER = [
     'Monday',
