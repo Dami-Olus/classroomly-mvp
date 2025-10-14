@@ -184,19 +184,38 @@ export default function AdminDashboard() {
       // Recent classes
       const { data: recentClasses } = await supabase
         .from('classes')
-        .select('title, created_at, tutors(profiles(first_name, last_name))')
+        .select('title, created_at, tutor_id')
         .order('created_at', { ascending: false })
         .limit(5)
 
-      recentClasses?.forEach((c: any) => {
-        const tutorName = `${c.tutors?.profiles?.first_name} ${c.tutors?.profiles?.last_name}`
-        activity.push({
-          type: 'class_created',
-          description: `${tutorName} created class: ${c.title}`,
-          timestamp: c.created_at,
-          user: tutorName,
-        })
-      })
+      // Get tutor info for each class
+      for (const c of recentClasses || []) {
+        if (c.tutor_id) {
+          const { data: tutor } = await supabase
+            .from('tutors')
+            .select('user_id')
+            .eq('id', c.tutor_id)
+            .single()
+
+          if (tutor?.user_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('first_name, last_name')
+              .eq('id', tutor.user_id)
+              .single()
+
+            if (profile) {
+              const tutorName = `${profile.first_name} ${profile.last_name}`
+              activity.push({
+                type: 'class_created',
+                description: `${tutorName} created class: ${c.title}`,
+                timestamp: c.created_at,
+                user: tutorName,
+              })
+            }
+          }
+        }
+      }
 
       // Recent bookings
       const { data: recentBookings } = await supabase

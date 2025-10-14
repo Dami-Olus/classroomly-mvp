@@ -29,63 +29,117 @@ export default function StudentDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      // Load upcoming bookings
+      // Load upcoming bookings (simplified query)
       const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
-        .select(`
-          *,
-          class:classes(
-            title,
-            subject,
-            duration,
-            tutor:tutors(
-              user:profiles(
-                first_name,
-                last_name,
-                profile_image
-              )
-            )
-          )
-        `)
+        .select('*, classes(title, subject, duration, tutor_id)')
         .eq('student_id', profile?.id)
         .in('status', ['confirmed', 'active'])
         .order('created_at', { ascending: false })
         .limit(5)
 
-      if (bookingsError) throw bookingsError
+      if (bookingsError) {
+        console.error('Error loading bookings:', bookingsError)
+        throw bookingsError
+      }
 
-      // Load active classrooms for this student
+      // Get tutor details for bookings
+      const bookingsWithTutors = await Promise.all(
+        (bookings || []).map(async (booking: any) => {
+          if (booking.classes?.tutor_id) {
+            const { data: tutor } = await supabase
+              .from('tutors')
+              .select('user_id')
+              .eq('id', booking.classes.tutor_id)
+              .single()
+
+            if (tutor?.user_id) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('first_name, last_name, profile_image')
+                .eq('id', tutor.user_id)
+                .single()
+
+              return {
+                ...booking,
+                classes: {
+                  ...booking.classes,
+                  tutor: {
+                    user: profile
+                  }
+                }
+              }
+            }
+          }
+          return booking
+        })
+      )
+
+      // Load active classrooms for this student (simplified)
       const { data: classrooms, error: classroomsError } = await supabase
         .from('classrooms')
-        .select(`
-          *,
-          bookings!inner (
-            *,
-            classes!inner (
-              title,
-              subject,
-              duration,
-              tutors!inner (
-                user_id,
-                profiles!inner (
-                  first_name,
-                  last_name,
-                  profile_image
-                )
-              )
-            )
-          )
-        `)
-        .eq('bookings.student_id', profile?.id)
+        .select('*, booking_id')
         .in('status', ['active', 'scheduled'])
         .order('created_at', { ascending: false })
 
-      if (classroomsError) throw classroomsError
+      if (classroomsError) {
+        console.error('Error loading classrooms:', classroomsError)
+        throw classroomsError
+      }
 
-      const studentClassrooms = classrooms || []
+      // Filter classrooms for this student by checking booking
+      const studentClassrooms = await Promise.all(
+        (classrooms || []).map(async (classroom: any) => {
+          const { data: booking } = await supabase
+            .from('bookings')
+            .select('*, classes(title, subject, duration, tutor_id)')
+            .eq('id', classroom.booking_id)
+            .eq('student_id', profile?.id)
+            .single()
 
-      setUpcomingBookings(bookings || [])
-      setActiveClassrooms(studentClassrooms)
+          if (booking) {
+            // Get tutor info
+            if (booking.classes?.tutor_id) {
+              const { data: tutor } = await supabase
+                .from('tutors')
+                .select('user_id')
+                .eq('id', booking.classes.tutor_id)
+                .single()
+
+              if (tutor?.user_id) {
+                const { data: tutorProfile } = await supabase
+                  .from('profiles')
+                  .select('first_name, last_name, profile_image')
+                  .eq('id', tutor.user_id)
+                  .single()
+
+                return {
+                  ...classroom,
+                  bookings: {
+                    ...booking,
+                    classes: {
+                      ...booking.classes,
+                      tutors: {
+                        profiles: tutorProfile
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            return {
+              ...classroom,
+              bookings: booking
+            }
+          }
+          return null
+        })
+      )
+
+      const filteredClassrooms = studentClassrooms.filter(c => c !== null)
+
+      setUpcomingBookings(bookingsWithTutors || [])
+      setActiveClassrooms(filteredClassrooms)
 
       // Calculate stats
       const { data: allBookings } = await supabase
