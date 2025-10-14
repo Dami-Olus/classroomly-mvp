@@ -14,11 +14,14 @@ interface RescheduleRequest {
   response_note: string | null
   created_at: string
   responded_at: string | null
+  requested_by: string // UUID of requester
   requester: {
+    id: string
     first_name: string
     last_name: string
   }
   responder?: {
+    id: string
     first_name: string
     last_name: string
   }
@@ -118,8 +121,19 @@ export default function RescheduleRequests({
     <div className="space-y-4">
       {requests.map((request) => {
         const isPending = request.status === 'pending'
-        const isRequester = request.requester && currentUserId
+        // Check if current user is the one who MADE the request
+        const isRequester = request.requested_by === currentUserId
+        // Can respond if: request is pending AND current user is NOT the requester
         const canRespond = isPending && !isRequester
+        
+        console.log('Reschedule request check:', {
+          requestId: request.id,
+          isPending,
+          requestedBy: request.requested_by,
+          currentUserId,
+          isRequester,
+          canRespond,
+        })
 
         return (
           <div
@@ -190,6 +204,21 @@ export default function RescheduleRequests({
               </div>
             </div>
 
+            {/* Reschedule Type Badge */}
+            {request.response_note && (request.response_note === 'ONE_TIME_RESCHEDULE' || request.response_note === 'PERMANENT_SCHEDULE_CHANGE') ? (
+              <div className="mb-3">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                  request.response_note === 'PERMANENT_SCHEDULE_CHANGE'
+                    ? 'bg-purple-100 text-purple-800'
+                    : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {request.response_note === 'PERMANENT_SCHEDULE_CHANGE' 
+                    ? '🔄 Permanent Schedule Change' 
+                    : '📅 One-Time Reschedule'}
+                </span>
+              </div>
+            ) : null}
+
             {/* Reason */}
             <div className="bg-gray-50 rounded-lg p-3 mb-4">
               <div className="flex items-start gap-2">
@@ -201,8 +230,8 @@ export default function RescheduleRequests({
               </div>
             </div>
 
-            {/* Response Note (if exists) */}
-            {request.response_note && (
+            {/* Response Note (if exists and not a reschedule type marker) */}
+            {request.response_note && request.response_note !== 'ONE_TIME_RESCHEDULE' && request.response_note !== 'PERMANENT_SCHEDULE_CHANGE' && request.status !== 'pending' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-xs font-medium text-blue-900 mb-1">Response:</p>
                 <p className="text-sm text-blue-800">{request.response_note}</p>

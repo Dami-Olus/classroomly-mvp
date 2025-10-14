@@ -180,10 +180,12 @@ export default function BookingDetailPage() {
         .select(`
           *,
           requester:profiles!requested_by(
+            id,
             first_name,
             last_name
           ),
           responder:profiles!responded_by(
+            id,
             first_name,
             last_name
           )
