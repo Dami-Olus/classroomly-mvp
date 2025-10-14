@@ -10,10 +10,9 @@ import FileUpload from '@/components/FileUpload'
 import MaterialsList from '@/components/MaterialsList'
 import RescheduleModal from '@/components/RescheduleModal'
 import RescheduleRequests from '@/components/RescheduleRequests'
-import SessionNotesView from '@/components/SessionNotesView'
 import { uploadFile } from '@/lib/storage'
 import { generateTimeSlotsFromRanges, type TimeRange } from '@/lib/availability'
-import { ArrowLeft, Calendar, Clock, User, FileText, Loader2, Video, RefreshCw, StickyNote } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, User, FileText, Loader2, Video, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 
@@ -52,9 +51,8 @@ export default function StudentBookingDetailPage() {
   const [booking, setBooking] = useState<BookingData | null>(null)
   const [materials, setMaterials] = useState<any[]>([])
   const [rescheduleRequests, setRescheduleRequests] = useState<any[]>([])
-  const [sessionNote, setSessionNote] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'details' | 'materials' | 'reschedule' | 'notes'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'materials' | 'reschedule'>('details')
   const [showRescheduleModal, setShowRescheduleModal] = useState(false)
   const [selectedSlotForReschedule, setSelectedSlotForReschedule] = useState<{ day: string; time: string } | null>(null)
   const [availableSlots, setAvailableSlots] = useState<Array<{ day: string; time: string }>>([])
@@ -162,9 +160,6 @@ export default function StudentBookingDetailPage() {
       
       // Load reschedule requests
       await loadRescheduleRequests()
-      
-      // Load session notes
-      await loadSessionNotes()
     } catch (error: any) {
       console.error('Error loading booking:', error)
       toast.error('Failed to load booking details')
@@ -220,25 +215,6 @@ export default function StudentBookingDetailPage() {
       setRescheduleRequests(data || [])
     } catch (error: any) {
       console.error('Error loading reschedule requests:', error)
-    }
-  }
-
-  const loadSessionNotes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('session_notes')
-        .select('*')
-        .eq('booking_id', bookingId)
-        .single()
-
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 = no rows returned, which is fine (no notes yet)
-        console.error('Error loading session notes:', error)
-      }
-      
-      setSessionNote(data || null)
-    } catch (error: any) {
-      console.error('Error in loadSessionNotes:', error)
     }
   }
 
@@ -376,17 +352,6 @@ export default function StudentBookingDetailPage() {
               >
                 Reschedule ({rescheduleRequests.filter(r => r.status === 'pending').length})
               </button>
-              <button
-                onClick={() => setActiveTab('notes')}
-                className={`pb-4 px-2 font-medium transition-colors ${
-                  activeTab === 'notes'
-                    ? 'text-primary-600 border-b-2 border-primary-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <StickyNote className="w-4 h-4 inline-block mr-1" />
-                Notes {sessionNote && '✓'}
-              </button>
             </div>
           </div>
 
@@ -506,30 +471,6 @@ export default function StudentBookingDetailPage() {
             </div>
           )}
 
-          {activeTab === 'notes' && (
-            <div className="space-y-6">
-              {/* Session Notes (Read-Only for Students) */}
-              <div className="card">
-                <h2 className="text-xl font-semibold mb-4">Session Notes</h2>
-                {sessionNote ? (
-                  <SessionNotesView
-                    note={sessionNote}
-                    showPrivateNotes={false} // Students cannot see private notes
-                    canEdit={false}
-                    canDelete={false}
-                  />
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <StickyNote className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                    <p>No session notes yet</p>
-                    <p className="text-sm mt-2">
-                      Your tutor will add notes after your session
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Reschedule Modal */}

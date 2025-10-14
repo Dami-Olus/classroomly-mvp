@@ -10,11 +10,9 @@ import FileUpload from '@/components/FileUpload'
 import MaterialsList from '@/components/MaterialsList'
 import RescheduleModal from '@/components/RescheduleModal'
 import RescheduleRequests from '@/components/RescheduleRequests'
-import SessionNotesForm from '@/components/SessionNotesForm'
-import SessionNotesView from '@/components/SessionNotesView'
 import { uploadFile } from '@/lib/storage'
 import { generateTimeSlotsFromRanges, type TimeRange } from '@/lib/availability'
-import { ArrowLeft, Calendar, Clock, User, FileText, Loader2, RefreshCw, StickyNote } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, User, FileText, Loader2, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 
@@ -48,11 +46,9 @@ export default function BookingDetailPage() {
   const [booking, setBooking] = useState<BookingData | null>(null)
   const [materials, setMaterials] = useState<any[]>([])
   const [rescheduleRequests, setRescheduleRequests] = useState<any[]>([])
-  const [sessionNote, setSessionNote] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'details' | 'materials' | 'reschedule' | 'notes'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'materials' | 'reschedule'>('details')
   const [showRescheduleModal, setShowRescheduleModal] = useState(false)
-  const [editingNotes, setEditingNotes] = useState(false)
   const [selectedSlotForReschedule, setSelectedSlotForReschedule] = useState<{ day: string; time: string } | null>(null)
   const [availableSlots, setAvailableSlots] = useState<Array<{ day: string; time: string }>>([])
 
@@ -141,9 +137,6 @@ export default function BookingDetailPage() {
       
       // Load reschedule requests
       await loadRescheduleRequests()
-      
-      // Load session notes
-      await loadSessionNotes()
     } catch (error: any) {
       console.error('Error loading booking:', error)
       toast.error('Failed to load booking details')
@@ -202,24 +195,6 @@ export default function BookingDetailPage() {
     }
   }
 
-  const loadSessionNotes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('session_notes')
-        .select('*')
-        .eq('booking_id', bookingId)
-        .single()
-
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 = no rows returned, which is fine (no notes yet)
-        console.error('Error loading session notes:', error)
-      }
-      
-      setSessionNote(data || null)
-    } catch (error: any) {
-      console.error('Error in loadSessionNotes:', error)
-    }
-  }
 
   const handleUpload = async (file: File) => {
     if (!user?.id) {
@@ -336,17 +311,6 @@ export default function BookingDetailPage() {
                 }`}
               >
                 Reschedule ({rescheduleRequests.filter(r => r.status === 'pending').length})
-              </button>
-              <button
-                onClick={() => setActiveTab('notes')}
-                className={`pb-4 px-2 font-medium transition-colors ${
-                  activeTab === 'notes'
-                    ? 'text-primary-600 border-b-2 border-primary-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <StickyNote className="w-4 h-4 inline-block mr-1" />
-                Notes {sessionNote && '✓'}
               </button>
             </div>
           </div>
@@ -479,54 +443,6 @@ export default function BookingDetailPage() {
             </div>
           )}
 
-          {activeTab === 'notes' && (
-            <div className="space-y-6">
-              {/* Session Notes */}
-              <div className="card">
-                <h2 className="text-xl font-semibold mb-4">
-                  {sessionNote ? 'Session Notes' : 'Add Session Notes'}
-                </h2>
-                
-                {!editingNotes && sessionNote ? (
-                  <SessionNotesView
-                    note={sessionNote}
-                    showPrivateNotes={true}
-                    canEdit={true}
-                    canDelete={true}
-                    onEdit={() => setEditingNotes(true)}
-                    onDelete={async () => {
-                      if (confirm('Are you sure you want to delete these notes?')) {
-                        try {
-                          const { error } = await supabase
-                            .from('session_notes')
-                            .delete()
-                            .eq('id', sessionNote.id)
-                          
-                          if (error) throw error
-                          toast.success('Notes deleted')
-                          setSessionNote(null)
-                          setEditingNotes(false)
-                        } catch (error: any) {
-                          toast.error('Failed to delete notes')
-                        }
-                      }
-                    }}
-                  />
-                ) : (
-                  <SessionNotesForm
-                    bookingId={bookingId}
-                    tutorId={booking?.tutor_id || ''}
-                    existingNote={sessionNote}
-                    onSave={() => {
-                      loadSessionNotes()
-                      setEditingNotes(false)
-                    }}
-                    onCancel={sessionNote ? () => setEditingNotes(false) : undefined}
-                  />
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Reschedule Modal */}
