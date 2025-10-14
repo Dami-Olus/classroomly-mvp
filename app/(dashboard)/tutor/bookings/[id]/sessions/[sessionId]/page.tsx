@@ -80,7 +80,15 @@ export default function TutorSessionDetailPage() {
         .eq('id', sessionId)
         .single()
 
-      if (sessionError) throw sessionError
+      if (sessionError) {
+        console.error('Session load error:', sessionError)
+        throw sessionError
+      }
+      
+      if (!sessionData) {
+        throw new Error('Session not found')
+      }
+      
       setSession(sessionData)
 
       // Load booking with class info
@@ -123,9 +131,16 @@ export default function TutorSessionDetailPage() {
         .single()
 
       setNotes(notesData)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading session:', error)
-      toast.error('Failed to load session details')
+      console.error('Error details:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        sessionId,
+        bookingId
+      })
+      toast.error(error?.message || 'Failed to load session details')
     } finally {
       setLoading(false)
     }
