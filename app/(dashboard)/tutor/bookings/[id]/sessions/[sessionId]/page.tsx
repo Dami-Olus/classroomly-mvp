@@ -55,8 +55,9 @@ export default function TutorSessionDetailPage() {
 
   const loadSessionData = async () => {
     try {
-      // Get tutor ID for current user
-      if (profile && !tutorId) {
+      // Get tutor ID for current user (always fetch fresh)
+      let currentTutorId = tutorId
+      if (profile && !currentTutorId) {
         const { data: tutorData } = await supabase
           .from('tutors')
           .select('id')
@@ -64,6 +65,7 @@ export default function TutorSessionDetailPage() {
           .single()
         
         if (tutorData) {
+          currentTutorId = tutorData.id
           setTutorId(tutorData.id)
         }
       }
@@ -422,7 +424,11 @@ export default function TutorSessionDetailPage() {
                   )}
                 </div>
 
-                {showNotesForm || !notes ? (
+                {loading ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Loading...</p>
+                  </div>
+                ) : showNotesForm || !notes ? (
                   tutorId ? (
                     <SessionNotesForm
                       bookingId={bookingId}
@@ -434,7 +440,7 @@ export default function TutorSessionDetailPage() {
                     />
                   ) : (
                     <div className="text-center py-8 text-gray-500">
-                      <p>Loading...</p>
+                      <p>Unable to load tutor information. Please refresh the page.</p>
                     </div>
                   )
                 ) : (
