@@ -132,12 +132,21 @@ export default function TutorSessionDetailPage() {
 
   const handleStartSession = async () => {
     try {
+      if (!session) {
+        toast.error('Session data not loaded')
+        return
+      }
+
       // Create classroom for this session
+      // Combine scheduled_date and scheduled_time to create session_date timestamp
+      const sessionDateTime = new Date(`${session.scheduled_date}T${session.scheduled_time}`)
+      
       const { data: classroom, error } = await supabase
         .from('classrooms')
         .insert({
           session_id: sessionId,
           booking_id: bookingId,
+          session_date: sessionDateTime.toISOString(),
           status: 'scheduled',
           room_url: Math.random().toString(36).substring(2, 14),
         })

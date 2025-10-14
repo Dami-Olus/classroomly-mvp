@@ -10,11 +10,17 @@
 ALTER TABLE classrooms
 ADD COLUMN IF NOT EXISTS session_id UUID REFERENCES sessions(id) ON DELETE SET NULL;
 
+-- Make session_date nullable since we now have session_id
+-- The session_date can be derived from the linked session
+ALTER TABLE classrooms
+ALTER COLUMN session_date DROP NOT NULL;
+
 -- Create index for performance
 CREATE INDEX IF NOT EXISTS idx_classrooms_session_id ON classrooms(session_id);
 
 -- Add comment
 COMMENT ON COLUMN classrooms.session_id IS 'Links classroom to a specific session (optional, for session-specific rooms)';
+COMMENT ON COLUMN classrooms.session_date IS 'Session date/time - can be null if linked to a session via session_id';
 
 -- ============================================
 -- 2. Consolidate materials tables
