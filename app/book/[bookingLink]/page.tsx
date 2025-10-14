@@ -18,6 +18,7 @@ import toast from 'react-hot-toast'
 import Link from 'next/link'
 import type { ClassWithTutor } from '@/types'
 import { generateTimeSlotsFromRanges, type TimeRange } from '@/lib/availability'
+import { generateSessions, createSessions } from '@/lib/sessions'
 
 interface BookableSlot {
   day: string
@@ -50,6 +51,8 @@ export default function PublicBookingPage() {
     studentName: '',
     studentEmail: '',
     notes: '',
+    startDate: '',
+    totalSessions: 12, // Default to 12 sessions
   })
 
   const [selectedSlots, setSelectedSlots] = useState<BookableSlot[]>([])
@@ -63,11 +66,11 @@ export default function PublicBookingPage() {
   // Pre-fill form if user is logged in
   useEffect(() => {
     if (profile && !formData.studentName) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         studentName: `${profile.first_name} ${profile.last_name}`,
         studentEmail: profile.email,
-        notes: '',
-      })
+      }))
     }
   }, [profile])
 
@@ -250,6 +253,11 @@ export default function PublicBookingPage() {
         throw new Error('Tutor information not found')
       }
 
+      // Validate start date
+      if (!formData.startDate) {
+        throw new Error('Please select a start date for your sessions')
+      }
+
       // Create booking with student_id and tutor_id
       const bookingData = {
         class_id: classData.id,
@@ -258,7 +266,9 @@ export default function PublicBookingPage() {
         student_name: formData.studentName,
         student_email: formData.studentEmail,
         scheduled_slots: selectedSlots,
-        total_sessions: selectedSlots.length,
+        total_sessions: formData.totalSessions,
+        sessions_per_week: selectedSlots.length,
+        start_date: formData.startDate,
         notes: formData.notes,
         status: 'confirmed' as const,
       }
@@ -308,39 +318,26 @@ export default function PublicBookingPage() {
         throw new Error('Failed to create booking')
       }
 
-      // Create classroom sessions for each selected slot
-      const classroomPromises = selectedSlots.map((slot) => {
-        // Create a future date for the session (next occurrence of the day)
-        const today = new Date()
-        const dayIndex = [
-          'Sunday',
-          'Monday',
-          'Tuesday',
-          'Wednesday',
-          'Thursday',
-          'Friday',
-          'Saturday',
-        ].indexOf(slot.day)
-        const currentDayIndex = today.getDay()
-        let daysUntilNext = dayIndex - currentDayIndex
-        if (daysUntilNext <= 0) daysUntilNext += 7
+      // Generate sessions based on class schedule and booking parameters
+      console.log('Generating sessions for booking...')
+      const classSchedule = {
+        days: selectedSlots.map(s => s.day),
+        times: selectedSlots.map(s => s.time),
+        duration: classData.duration,
+      }
 
-        const sessionDate = new Date(today)
-        sessionDate.setDate(today.getDate() + daysUntilNext)
-        const [hours, minutes] = slot.time.split(':')
-        sessionDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
-
-        const roomUrl = Math.random().toString(36).substring(2, 14)
-
-        return supabase.from('classrooms').insert({
-          booking_id: createdBooking.id,
-          session_date: sessionDate.toISOString(),
-          room_url: roomUrl,
-          status: 'scheduled',
-        })
+      const sessions = await generateSessions({
+        bookingId: createdBooking.id,
+        classSchedule,
+        startDate: new Date(formData.startDate),
+        totalSessions: formData.totalSessions,
       })
 
-      await Promise.all(classroomPromises)
+      console.log(`Generated ${sessions.length} sessions`)
+
+      // Create all sessions in the database
+      await createSessions(sessions)
+      console.log('Sessions created successfully')
 
       // Send booking confirmation emails
       try {
@@ -609,6 +606,52 @@ export default function PublicBookingPage() {
                 />
                 <p className="text-xs text-secondary-500 mt-1">
                   We'll send session details and classroom links to this email
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="startDate" className="label">
+                  <Calendar className="w-4 h-4 inline-block mr-2" />
+                  Start Date *
+                </label>
+                <input
+                  type="date"
+                  id="startDate"
+                  value={formData.startDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
+                  min={new Date().toISOString().split('T')[0]}
+                  className="input"
+                  required
+                />
+                <p className="text-xs text-secondary-500 mt-1">
+                  When would you like your sessions to begin?
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="totalSessions" className="label">
+                  <Clock className="w-4 h-4 inline-block mr-2" />
+                  Number of Sessions
+                </label>
+                <select
+                  id="totalSessions"
+                  value={formData.totalSessions}
+                  onChange={(e) =>
+                    setFormData({ ...formData, totalSessions: parseInt(e.target.value) })
+                  }
+                  className="input"
+                >
+                  <option value={4}>4 sessions (1 month)</option>
+                  <option value={8}>8 sessions (2 months)</option>
+                  <option value={12}>12 sessions (3 months)</option>
+                  <option value={16}>16 sessions (4 months)</option>
+                  <option value={24}>24 sessions (6 months)</option>
+                  <option value={48}>48 sessions (1 year)</option>
+                </select>
+                <p className="text-xs text-secondary-500 mt-1">
+                  Based on your weekly schedule. You can add more sessions later.
                 </p>
               </div>
 
