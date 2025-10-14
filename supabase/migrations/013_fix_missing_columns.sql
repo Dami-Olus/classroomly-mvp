@@ -68,10 +68,13 @@ CREATE INDEX IF NOT EXISTS idx_materials_class_id ON materials(class_id);
 -- ============================================
 -- 3. Fix RLS policies for materials
 -- ============================================
--- Drop old policies if they exist
+-- Drop old policies if they exist (both old and new names)
 DROP POLICY IF EXISTS "Participants can view materials" ON materials;
 DROP POLICY IF EXISTS "Participants can upload" ON materials;
 DROP POLICY IF EXISTS "Uploaders can delete" ON materials;
+DROP POLICY IF EXISTS "Booking participants can view materials" ON materials;
+DROP POLICY IF EXISTS "Authenticated users can upload materials" ON materials;
+DROP POLICY IF EXISTS "Users can delete their uploads" ON materials;
 
 -- Enable RLS
 ALTER TABLE materials ENABLE ROW LEVEL SECURITY;
@@ -102,10 +105,13 @@ CREATE POLICY "Users can delete their uploads"
 -- ============================================
 -- 4. Ensure classrooms RLS allows both tutor and student access
 -- ============================================
--- Drop restrictive policies
+-- Drop all existing policies
 DROP POLICY IF EXISTS "Tutors can view their classrooms" ON classrooms;
 DROP POLICY IF EXISTS "Students can view their classrooms" ON classrooms;
 DROP POLICY IF EXISTS "Tutors can manage classrooms" ON classrooms;
+DROP POLICY IF EXISTS "Booking participants can view classrooms" ON classrooms;
+DROP POLICY IF EXISTS "Booking participants can start sessions" ON classrooms;
+DROP POLICY IF EXISTS "Tutors can create classrooms" ON classrooms;
 
 -- Create more permissive policies
 
@@ -151,7 +157,9 @@ CREATE POLICY "Tutors can create classrooms"
 -- 5. Update sessions RLS for better access
 -- ============================================
 -- Allow both tutor and student to update session status
+-- Drop existing policies that might conflict
 DROP POLICY IF EXISTS "Tutors can update their sessions" ON sessions;
+DROP POLICY IF EXISTS "Booking participants can update sessions" ON sessions;
 
 CREATE POLICY "Booking participants can update sessions"
   ON sessions FOR UPDATE

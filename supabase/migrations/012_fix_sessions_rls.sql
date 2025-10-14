@@ -1,8 +1,14 @@
 -- Fix RLS policies for sessions table to allow creation during booking
 -- Issue: Students booking classes cannot create sessions due to RLS
 
--- Drop the existing restrictive policy
+-- Drop existing policies to recreate them
 DROP POLICY IF EXISTS "Tutors can manage their sessions" ON sessions;
+DROP POLICY IF EXISTS "Tutors can create sessions" ON sessions;
+DROP POLICY IF EXISTS "Students can create sessions for their bookings" ON sessions;
+DROP POLICY IF EXISTS "Allow session creation for any booking" ON sessions;
+DROP POLICY IF EXISTS "Tutors can update their sessions" ON sessions;
+DROP POLICY IF EXISTS "Tutors can delete their sessions" ON sessions;
+DROP POLICY IF EXISTS "Booking participants can update sessions" ON sessions;
 
 -- Create separate policies for different operations
 
