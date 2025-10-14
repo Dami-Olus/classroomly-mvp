@@ -516,10 +516,11 @@ export default function StudentBookingDetailPage() {
         </div>
 
         {/* Reschedule Modal */}
-        {showRescheduleModal && selectedSlotForReschedule && (
+        {showRescheduleModal && selectedSlotForReschedule && booking && (
           <RescheduleModal
             bookingId={bookingId}
             currentSlot={selectedSlotForReschedule}
+            allScheduledSlots={booking.scheduled_slots}
             availableSlots={availableSlots}
             onClose={() => {
               setShowRescheduleModal(false)

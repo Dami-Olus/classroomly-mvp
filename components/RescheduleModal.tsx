@@ -13,6 +13,7 @@ interface TimeSlot {
 interface RescheduleModalProps {
   bookingId: string
   currentSlot: TimeSlot
+  allScheduledSlots: TimeSlot[] // All slots in the booking
   availableSlots: TimeSlot[]
   onClose: () => void
   onSuccess: () => void
@@ -22,13 +23,16 @@ interface RescheduleModalProps {
 export default function RescheduleModal({
   bookingId,
   currentSlot,
+  allScheduledSlots,
   availableSlots,
   onClose,
   onSuccess,
   currentUserId,
 }: RescheduleModalProps) {
   const supabase = createClient()
+  const [slotToReschedule, setSlotToReschedule] = useState<TimeSlot>(currentSlot)
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
+  const [isPermanent, setIsPermanent] = useState(false)
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -63,19 +67,27 @@ export default function RescheduleModal({
     setSubmitting(true)
 
     try {
-      // Create reschedule request
+      // Create reschedule request with reschedule type
       const { error } = await supabase.from('reschedule_requests').insert({
         booking_id: bookingId,
         requested_by: currentUserId,
-        original_slot: currentSlot,
+        original_slot: slotToReschedule, // Use the selected slot to reschedule, not just first
         proposed_slot: selectedSlot,
         reason: reason.trim(),
         status: 'pending',
+        // Store metadata about reschedule type
+        response_note: isPermanent 
+          ? 'PERMANENT_SCHEDULE_CHANGE' 
+          : 'ONE_TIME_RESCHEDULE',
       })
 
       if (error) throw error
 
-      toast.success('Reschedule request sent!')
+      toast.success(
+        isPermanent 
+          ? 'Permanent schedule change request sent!' 
+          : 'One-time reschedule request sent!'
+      )
       onSuccess()
       onClose()
     } catch (error: any) {
@@ -108,14 +120,92 @@ export default function RescheduleModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Select Which Slot to Reschedule (if multiple slots) */}
+          {allScheduledSlots.length > 1 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Which session do you want to reschedule?</h3>
+              <div className="space-y-2">
+                {allScheduledSlots.map((slot, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setSlotToReschedule(slot)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
+                      slotToReschedule.day === slot.day && slotToReschedule.time === slot.time
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Calendar className="w-5 h-5 text-primary-600" />
+                    <span className="font-medium">{slot.day}</span>
+                    <Clock className="w-5 h-5 text-gray-400 ml-auto" />
+                    <span>{slot.time}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Current Slot */}
           <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm font-medium text-gray-700 mb-2">Current Time:</p>
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              {allScheduledSlots.length > 1 ? 'Rescheduling:' : 'Current Time:'}
+            </p>
             <div className="flex items-center gap-3 text-lg">
               <Calendar className="w-5 h-5 text-primary-600" />
-              <span className="font-semibold">{currentSlot.day}</span>
+              <span className="font-semibold">{slotToReschedule.day}</span>
               <Clock className="w-5 h-5 text-gray-400 ml-4" />
-              <span>{currentSlot.time}</span>
+              <span>{slotToReschedule.time}</span>
+            </div>
+          </div>
+
+          {/* Reschedule Type: One-Time vs Permanent */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Reschedule Type</h3>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setIsPermanent(false)}
+                className={`w-full flex items-start gap-3 p-4 rounded-lg border-2 transition-all ${
+                  !isPermanent
+                    ? 'border-primary-500 bg-primary-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                  !isPermanent ? 'border-primary-500' : 'border-gray-300'
+                }`}>
+                  {!isPermanent && <div className="w-3 h-3 rounded-full bg-primary-500" />}
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-medium text-gray-900">One-Time Reschedule</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Reschedule just this week's session. Future sessions stay at {slotToReschedule.day} {slotToReschedule.time}
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPermanent(true)}
+                className={`w-full flex items-start gap-3 p-4 rounded-lg border-2 transition-all ${
+                  isPermanent
+                    ? 'border-primary-500 bg-primary-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                  isPermanent ? 'border-primary-500' : 'border-gray-300'
+                }`}>
+                  {isPermanent && <div className="w-3 h-3 rounded-full bg-primary-500" />}
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-medium text-gray-900">Permanent Schedule Change</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Change the weekly schedule going forward. All future {slotToReschedule.day} sessions will move to the new time.
+                  </p>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -147,18 +237,18 @@ export default function RescheduleModal({
                             const isSelected =
                               selectedSlot?.day === slot.day &&
                               selectedSlot?.time === slot.time
-                            const isCurrent =
-                              currentSlot.day === slot.day &&
-                              currentSlot.time === slot.time
+                            const isSlotBeingRescheduled =
+                              slotToReschedule.day === slot.day &&
+                              slotToReschedule.time === slot.time
 
                             return (
                               <button
                                 key={`${day}-${slot.time}-${index}`}
                                 type="button"
                                 onClick={() => setSelectedSlot(slot)}
-                                disabled={isCurrent}
+                                disabled={isSlotBeingRescheduled}
                                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                                  isCurrent
+                                  isSlotBeingRescheduled
                                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                     : isSelected
                                     ? 'bg-primary-600 text-white'
@@ -166,7 +256,7 @@ export default function RescheduleModal({
                                 }`}
                               >
                                 {slot.time}
-                                {isCurrent && (
+                                {isSlotBeingRescheduled && (
                                   <span className="ml-2 text-xs">(current)</span>
                                 )}
                               </button>
