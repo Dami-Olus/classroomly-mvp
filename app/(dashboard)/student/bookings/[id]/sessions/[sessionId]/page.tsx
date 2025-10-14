@@ -204,10 +204,10 @@ export default function StudentSessionDetailPage() {
     )
   }
 
+  const isCompleted = session.status === 'completed'
   const canJoin = session.classroom_id && (session.status === 'scheduled' || session.status === 'rescheduled')
   const canStart = !session.classroom_id && !isCompleted && (session.status === 'scheduled' || session.status === 'rescheduled')
   const canReschedule = !isCompleted && (session.status === 'scheduled' || session.status === 'rescheduled')
-  const isCompleted = session.status === 'completed'
 
   return (
     <ProtectedRoute requiredRole="student">
