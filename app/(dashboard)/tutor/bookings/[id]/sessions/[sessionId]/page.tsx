@@ -67,11 +67,12 @@ export default function TutorSessionDetailPage() {
       }
 
       // Load session with classroom info
+      // Use !sessions_classroom_id_fkey to specify which relationship to use
       const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
         .select(`
           *,
-          classroom:classrooms(
+          classroom:classrooms!sessions_classroom_id_fkey(
             id,
             room_url,
             status
