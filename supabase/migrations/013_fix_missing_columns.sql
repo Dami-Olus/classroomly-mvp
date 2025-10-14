@@ -184,7 +184,70 @@ CREATE POLICY "Booking participants can update sessions"
   );
 
 -- ============================================
--- 6. Update reschedule_requests to support session-level reschedules
+-- 6. Fix RLS policies for class_notes and class_reports
+-- ============================================
+
+-- Class Notes Policies
+DROP POLICY IF EXISTS "Tutors can manage class notes" ON class_notes;
+
+CREATE POLICY "Tutors can create class notes"
+  ON class_notes FOR INSERT
+  WITH CHECK (tutor_id IN (SELECT id FROM tutors WHERE user_id = auth.uid()));
+
+CREATE POLICY "Tutors can view their class notes"
+  ON class_notes FOR SELECT
+  USING (tutor_id IN (SELECT id FROM tutors WHERE user_id = auth.uid()));
+
+CREATE POLICY "Tutors can update their class notes"
+  ON class_notes FOR UPDATE
+  USING (tutor_id IN (SELECT id FROM tutors WHERE user_id = auth.uid()));
+
+CREATE POLICY "Tutors can delete their class notes"
+  ON class_notes FOR DELETE
+  USING (tutor_id IN (SELECT id FROM tutors WHERE user_id = auth.uid()));
+
+-- Students can view class notes for their bookings
+CREATE POLICY "Students can view class notes"
+  ON class_notes FOR SELECT
+  USING (
+    booking_id IN (
+      SELECT id FROM bookings WHERE student_id = auth.uid()
+    )
+  );
+
+-- Class Reports Policies
+-- ============================================
+-- Drop existing policies
+DROP POLICY IF EXISTS "Tutors can manage reports" ON class_reports;
+DROP POLICY IF EXISTS "Students can view shared reports" ON class_reports;
+
+-- Tutors can create and manage their reports
+CREATE POLICY "Tutors can create reports"
+  ON class_reports FOR INSERT
+  WITH CHECK (tutor_id IN (SELECT id FROM tutors WHERE user_id = auth.uid()));
+
+CREATE POLICY "Tutors can view their reports"
+  ON class_reports FOR SELECT
+  USING (tutor_id IN (SELECT id FROM tutors WHERE user_id = auth.uid()));
+
+CREATE POLICY "Tutors can update their reports"
+  ON class_reports FOR UPDATE
+  USING (tutor_id IN (SELECT id FROM tutors WHERE user_id = auth.uid()));
+
+CREATE POLICY "Tutors can delete their reports"
+  ON class_reports FOR DELETE
+  USING (tutor_id IN (SELECT id FROM tutors WHERE user_id = auth.uid()));
+
+-- Students can view shared reports
+CREATE POLICY "Students can view shared reports"
+  ON class_reports FOR SELECT
+  USING (
+    student_id = auth.uid() 
+    AND is_shared_with_student = true
+  );
+
+-- ============================================
+-- 7. Update reschedule_requests to support session-level reschedules
 -- ============================================
 -- Add session_id to link reschedule requests to specific sessions
 ALTER TABLE reschedule_requests
