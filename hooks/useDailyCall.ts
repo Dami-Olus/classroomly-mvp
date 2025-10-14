@@ -161,7 +161,7 @@ export const useDailyCall = () => {
         
         if (event.participant && !event.participant.local) {
           const name = event.participant.user_name || 'A participant'
-          toast.info(`${name} left the classroom`)
+          toast(`${name} left the classroom`, { icon: '👋' })
         }
       }
 
