@@ -15,9 +15,11 @@ import {
   Calendar,
   Clock,
   DollarSign,
+  Upload,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { ClassWithTutor } from '@/types'
+import ImportSessionsModal from '@/components/ImportSessionsModal'
 
 export default function ManageClassesPage() {
   const { profile } = useAuth()
@@ -25,6 +27,9 @@ export default function ManageClassesPage() {
   const [classes, setClasses] = useState<ClassWithTutor[]>([])
   const [loading, setLoading] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [selectedClassForImport, setSelectedClassForImport] = useState<ClassWithTutor | null>(null)
+  const [tutorId, setTutorId] = useState<string | null>(null)
 
   useEffect(() => {
     loadClasses()
@@ -42,6 +47,8 @@ export default function ManageClassesPage() {
         .single()
 
       if (!tutorData) return
+
+      setTutorId(tutorData.id)
 
       // Get classes
       const { data, error } = await supabase
@@ -235,13 +242,24 @@ export default function ManageClassesPage() {
                   {/* Actions */}
                   <div className="flex gap-2">
                     <button
+                      onClick={() => {
+                        setSelectedClassForImport(classItem)
+                        setShowImportModal(true)
+                      }}
+                      className="btn-primary flex items-center justify-center gap-2 flex-1"
+                      title="Import existing student sessions from Excel/CSV"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Import Sessions
+                    </button>
+                    <button
                       onClick={() =>
                         toggleClassStatus(classItem.id, classItem.is_active)
                       }
                       className={
                         classItem.is_active
                           ? 'btn-secondary flex-1'
-                          : 'btn-primary flex-1'
+                          : 'btn-outline flex-1'
                       }
                     >
                       {classItem.is_active ? 'Deactivate' : 'Activate'}
@@ -250,7 +268,7 @@ export default function ManageClassesPage() {
                       href={`/tutor/classes/${classItem.id}/edit`}
                       className="btn-outline flex-1 text-center"
                     >
-                      Edit Class
+                      Edit
                     </Link>
                   </div>
                 </div>
@@ -258,6 +276,24 @@ export default function ManageClassesPage() {
             </div>
           )}
         </div>
+
+        {/* Import Sessions Modal */}
+        {showImportModal && selectedClassForImport && tutorId && (
+          <ImportSessionsModal
+            classId={selectedClassForImport.id}
+            tutorId={tutorId}
+            classDuration={selectedClassForImport.duration || 60}
+            onClose={() => {
+              setShowImportModal(false)
+              setSelectedClassForImport(null)
+            }}
+            onSuccess={() => {
+              setShowImportModal(false)
+              setSelectedClassForImport(null)
+              toast.success('Sessions imported successfully! Check your bookings.')
+            }}
+          />
+        )}
       </DashboardLayout>
     </ProtectedRoute>
   )
