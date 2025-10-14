@@ -115,19 +115,29 @@ export default function StudentBookingDetailPage() {
         )
         
         // Get all booked slots for this tutor (global availability)
-        const { data: tutorBookings } = await supabase
+        console.log('Fetching bookings for tutor_id:', tutorId)
+        const { data: tutorBookings, error: bookingsError } = await supabase
           .from('bookings')
-          .select('scheduled_slots')
+          .select('scheduled_slots, tutor_id, id')
           .eq('tutor_id', tutorId)
           .in('status', ['confirmed', 'rescheduled'])
           .neq('id', bookingId) // Exclude current booking
+        
+        if (bookingsError) {
+          console.error('Error fetching tutor bookings:', bookingsError)
+        }
+        
+        console.log('Tutor bookings fetched:', tutorBookings?.length || 0, tutorBookings)
         
         // Extract booked slots
         const bookedSlots: Array<{day: string, time: string}> = []
         if (tutorBookings) {
           tutorBookings.forEach(booking => {
             const slots = booking.scheduled_slots as Array<{day: string, time: string}>
-            if (slots) bookedSlots.push(...slots)
+            if (slots) {
+              console.log('Adding booked slots from booking:', booking.id, slots)
+              bookedSlots.push(...slots)
+            }
           })
         }
         
@@ -138,9 +148,11 @@ export default function StudentBookingDetailPage() {
           )
         )
         
-        console.log('Total slots from tutor availability:', allSlots.length)
-        console.log('Booked slots (other bookings):', bookedSlots.length)
-        console.log('Available for reschedule:', availableForReschedule.length)
+        console.log('📊 Reschedule Availability:')
+        console.log('- Total slots from tutor availability:', allSlots.length)
+        console.log('- Booked slots (other bookings):', bookedSlots.length)
+        console.log('- Available for reschedule:', availableForReschedule.length)
+        console.log('- Booked slots details:', bookedSlots)
         
         setAvailableSlots(availableForReschedule)
       }

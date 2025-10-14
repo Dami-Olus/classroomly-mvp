@@ -14,6 +14,11 @@ export default function StudentDashboard() {
   const supabase = createClient()
   const [upcomingBookings, setUpcomingBookings] = useState<any[]>([])
   const [activeClassrooms, setActiveClassrooms] = useState<any[]>([])
+  const [stats, setStats] = useState({
+    totalBookings: 0,
+    completedSessions: 0,
+    upcomingSessions: 0,
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -81,6 +86,22 @@ export default function StudentDashboard() {
 
       setUpcomingBookings(bookings || [])
       setActiveClassrooms(studentClassrooms)
+
+      // Calculate stats
+      const { data: allBookings } = await supabase
+        .from('bookings')
+        .select('status, total_sessions, completed_sessions')
+        .eq('student_id', profile?.id)
+
+      const totalBookings = allBookings?.length || 0
+      const completedSessions = allBookings?.reduce((sum, b) => sum + (b.completed_sessions || 0), 0) || 0
+      const upcomingSessions = allBookings?.filter(b => b.status === 'confirmed' || b.status === 'rescheduled').length || 0
+
+      setStats({
+        totalBookings,
+        completedSessions,
+        upcomingSessions,
+      })
     } catch (error) {
       console.error('Error loading dashboard data:', error)
       toast.error('Failed to load dashboard data')
@@ -109,14 +130,14 @@ export default function StudentDashboard() {
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <StatCard
-              icon={<Calendar className="w-6 h-6 text-primary-600" />}
-              title="Upcoming Sessions"
-              value={upcomingBookings.length.toString()}
+              icon={<BookOpen className="w-6 h-6 text-primary-600" />}
+              title="Total Bookings"
+              value={stats.totalBookings.toString()}
             />
             <StatCard
-              icon={<BookOpen className="w-6 h-6 text-green-600" />}
-              title="Active Bookings"
-              value={upcomingBookings.length.toString()}
+              icon={<Calendar className="w-6 h-6 text-green-600" />}
+              title="Upcoming Sessions"
+              value={stats.upcomingSessions.toString()}
             />
             <StatCard
               icon={<Video className="w-6 h-6 text-blue-600" />}
@@ -124,9 +145,9 @@ export default function StudentDashboard() {
               value={activeClassrooms.length.toString()}
             />
             <StatCard
-              icon={<Clock className="w-6 h-6 text-gray-600" />}
+              icon={<Clock className="w-6 h-6 text-orange-600" />}
               title="Completed Sessions"
-              value="0"
+              value={stats.completedSessions.toString()}
             />
           </div>
 
