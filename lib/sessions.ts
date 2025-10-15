@@ -97,7 +97,7 @@ export async function getBookingSessions(bookingId: string) {
     .from('sessions')
     .select(`
       *,
-      classroom:classrooms(
+      classroom:classrooms!sessions_classroom_id_fkey(
         id,
         room_url,
         status
