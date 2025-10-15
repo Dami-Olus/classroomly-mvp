@@ -19,11 +19,7 @@ Sentry.init({
   
   environment: process.env.NODE_ENV,
   
-  integrations: [
-    new Sentry.Replay({
-      maskAllText: false,
-      blockAllMedia: false,
-    }),
-  ],
+  // Integrations are automatically added by Sentry
+  // Replay integration is included by default in newer versions
 })
 
