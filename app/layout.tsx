@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 import { PostHogProvider, PostHogPageView } from '@/lib/analytics/posthog'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Suspense } from 'react'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -53,6 +55,8 @@ export default function RootLayout({
             }}
           />
         </PostHogProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
