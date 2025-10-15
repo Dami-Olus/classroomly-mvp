@@ -95,7 +95,14 @@ export async function getBookingSessions(bookingId: string) {
   
   const { data, error } = await supabase
     .from('sessions')
-    .select('*')
+    .select(`
+      *,
+      classroom:classrooms(
+        id,
+        room_url,
+        status
+      )
+    `)
     .eq('booking_id', bookingId)
     .order('session_number', { ascending: true })
   

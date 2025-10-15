@@ -14,6 +14,11 @@ interface Session {
   duration: number
   status: string
   classroom_id?: string
+  classroom?: {
+    id: string
+    room_url: string
+    status: string
+  }
 }
 
 interface SessionsListProps {
@@ -59,7 +64,7 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
 
   const canJoinSession = (session: Session) => {
     if (role !== 'student') return false
-    if (!session.classroom_id) return false
+    if (!session.classroom?.room_url) return false
     if (session.status !== 'scheduled' && session.status !== 'rescheduled') return false
     
     return true
@@ -145,9 +150,9 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
                             </button>
                           )}
                           
-                          {session.classroom_id && (
+                          {session.classroom?.room_url && (
                             <Link
-                              href={`/classroom/${session.classroom_id}`}
+                              href={`/classroom/${session.classroom.room_url}`}
                               target="_blank"
                               className="btn-primary text-sm flex items-center gap-2"
                             >
@@ -171,7 +176,7 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
                         <>
                           {canJoinSession(session) && (
                             <Link
-                              href={`/classroom/${session.classroom_id}`}
+                              href={`/classroom/${session.classroom?.room_url}`}
                               target="_blank"
                               className="btn-primary text-sm flex items-center gap-2"
                             >
