@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import { useTimezone } from '@/hooks/useTimezone'
 import {
   BookOpen,
   Clock,
@@ -13,12 +14,16 @@ import {
   Mail,
   CheckCircle,
   ArrowLeft,
+  Globe,
+  Info,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import type { ClassWithTutor } from '@/types'
 import { generateTimeSlotsFromRanges, type TimeRange } from '@/lib/availability'
 import { generateSessions, createSessions } from '@/lib/sessions'
+import { DualTimeDisplay, TimeSlotWithTimezone } from '@/components/DualTimeDisplay'
+import { TimezoneInfoDisplay } from '@/components/TimezoneSelector'
 
 interface BookableSlot {
   day: string
@@ -41,11 +46,13 @@ export default function PublicBookingPage() {
   const bookingLink = params.bookingLink as string
   const supabase = createClient()
   const { user, profile } = useAuth()
+  const { timezone: studentTimezone, timezoneInfo } = useTimezone()
 
   const [classData, setClassData] = useState<ClassWithTutor | null>(null)
   const [loading, setLoading] = useState(true)
   const [booking, setBooking] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [tutorTimezone, setTutorTimezone] = useState<string>('UTC')
 
   const [formData, setFormData] = useState({
     studentName: '',
@@ -171,6 +178,10 @@ export default function PublicBookingPage() {
       console.log('Tutor availability:', data.tutor?.availability)
       
       setClassData(data as any)
+      
+      // Set tutor timezone
+      const tutorTz = (data.tutor as any)?.timezone || 'UTC'
+      setTutorTimezone(tutorTz)
       
       // Generate available slots from TUTOR's global availability (not class-specific)
       const tutorAvailability = (data.tutor as any)?.availability
@@ -673,6 +684,30 @@ export default function PublicBookingPage() {
             </div>
           </div>
 
+          {/* Timezone Information */}
+          <div className="card bg-blue-50 border-blue-200">
+            <div className="flex items-center gap-2 mb-3">
+              <Globe className="w-5 h-5 text-blue-600" />
+              <h3 className="font-semibold text-blue-900">Timezone Information</h3>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Your timezone:</span>
+                <TimezoneInfoDisplay timezone={studentTimezone} showDetails={true} />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Tutor timezone:</span>
+                <TimezoneInfoDisplay timezone={tutorTimezone} showDetails={true} />
+              </div>
+              {studentTimezone !== tutorTimezone && (
+                <div className="text-sm text-blue-700 bg-blue-100 p-2 rounded">
+                  <Info className="w-4 h-4 inline mr-1" />
+                  Times are automatically converted to your timezone
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Select Time Slots */}
           <div className="card">
             <h2 className="text-xl font-semibold mb-2">Select Time Slots</h2>
@@ -680,6 +715,11 @@ export default function PublicBookingPage() {
               Choose up to {classData.weekly_frequency} session
               {classData.weekly_frequency > 1 ? 's' : ''} per week ({selectedSlots.length}{' '}
               selected)
+              {studentTimezone !== tutorTimezone && (
+                <span className="block mt-1 text-blue-600">
+                  Times shown in your timezone ({studentTimezone})
+                </span>
+              )}
             </p>
 
             <div className="space-y-4">
@@ -721,7 +761,21 @@ export default function PublicBookingPage() {
                             }`}
                             title={isBooked ? 'This slot is already booked' : ''}
                           >
-                            {slot.time}
+                            <div className="text-center">
+                              <div className="font-medium">{slot.time}</div>
+                              {studentTimezone !== tutorTimezone && (
+                                <div className="text-xs opacity-75 mt-1">
+                                  <DualTimeDisplay
+                                    time={slot.time}
+                                    fromTz={tutorTimezone}
+                                    toTz={studentTimezone}
+                                    showLabels={false}
+                                    showOffset={false}
+                                    compact={true}
+                                  />
+                                </div>
+                              )}
+                            </div>
                           </button>
                         )
                       })}

@@ -6,19 +6,24 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
-import { Calendar, Clock, Save } from 'lucide-react'
+import { useTimezone } from '@/hooks/useTimezone'
+import { Calendar, Clock, Save, Globe, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AvailabilitySelector from '@/components/AvailabilitySelector'
+import { TimezoneSelector, TimezoneInfoDisplay } from '@/components/TimezoneSelector'
+import { DualTimeDisplay } from '@/components/DualTimeDisplay'
 import type { TimeRange } from '@/lib/availability'
 
 export default function AvailabilityPage() {
   const router = useRouter()
   const { profile } = useAuth()
+  const { timezone, timezoneInfo, updateTimezone, loading: timezoneLoading } = useTimezone()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [availableSlots, setAvailableSlots] = useState<TimeRange[]>([])
   const [tutorId, setTutorId] = useState<string | null>(null)
+  const [showTimezonePreview, setShowTimezonePreview] = useState(false)
 
   useEffect(() => {
     loadAvailability()
@@ -146,16 +151,77 @@ export default function AvailabilityPage() {
             </button>
           </div>
 
+          {/* Timezone Management */}
+          <div className="card bg-blue-50 border-blue-200 mt-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Globe className="w-6 h-6 text-blue-600" />
+              <h3 className="text-lg font-semibold text-blue-900">Timezone Settings</h3>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Timezone
+                </label>
+                <TimezoneSelector
+                  value={timezone}
+                  onChange={updateTimezone}
+                  disabled={timezoneLoading}
+                  className="w-full"
+                />
+                {timezoneInfo && (
+                  <div className="mt-2 text-sm text-gray-600">
+                    <TimezoneInfoDisplay timezone={timezone} showDetails={true} />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTimezonePreview(!showTimezonePreview)}
+                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  <Info className="w-4 h-4" />
+                  {showTimezonePreview ? 'Hide' : 'Show'} timezone preview
+                </button>
+              </div>
+
+              {showTimezonePreview && availableSlots.length > 0 && (
+                <div className="bg-white p-4 rounded-lg border">
+                  <h4 className="font-medium text-gray-900 mb-3">How your availability appears to students:</h4>
+                  <div className="space-y-2">
+                    {availableSlots.slice(0, 3).map((slot, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span className="font-medium">{slot.day}</span>
+                        <DualTimeDisplay
+                          time={`${slot.startTime} - ${slot.endTime}`}
+                          fromTz={timezone}
+                          toTz="America/New_York"
+                          showLabels={true}
+                          compact={true}
+                        />
+                      </div>
+                    ))}
+                    {availableSlots.length > 3 && (
+                      <p className="text-sm text-gray-500">... and {availableSlots.length - 3} more slots</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Info Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
             <div className="card bg-secondary-50">
               <Clock className="w-8 h-8 text-primary-600 mb-3" />
               <h3 className="font-semibold text-secondary-900 mb-2">
-                Time Zones
+                Automatic Conversion
               </h3>
               <p className="text-sm text-secondary-600">
-                Your times are in {Intl.DateTimeFormat().resolvedOptions().timeZone}. 
-                Students will see times converted to their timezone automatically.
+                Students will see your availability times converted to their local timezone automatically. 
+                No manual calculation needed!
               </p>
             </div>
 
