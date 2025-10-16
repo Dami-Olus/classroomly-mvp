@@ -200,14 +200,8 @@ WHERE detected_timezone IS NOT NULL
 GROUP BY detected_timezone, timezone_source
 ORDER BY user_count DESC;
 
--- Add timezone migration status
-INSERT INTO migration_status (migration_name, applied_at, description)
-VALUES (
-  '016_add_timezone_support',
-  NOW(),
-  'Added comprehensive timezone support including detection, conversion, and analytics'
-) ON CONFLICT (migration_name) DO NOTHING;
-
 -- ============================================
 -- Migration complete!
 -- ============================================
+-- Timezone support has been successfully added to ClassroomLY
+-- This includes detection, conversion, and analytics capabilities
