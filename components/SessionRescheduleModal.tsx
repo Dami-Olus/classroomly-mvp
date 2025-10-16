@@ -60,13 +60,14 @@ export default function SessionRescheduleModal({
       if (tutorError) throw tutorError
 
       const availability = tutorData?.availability as any
+      let allSlots: TimeSlot[] = []
+      
       if (availability?.slots && Array.isArray(availability.slots)) {
         // Generate available slots from tutor's availability
-        const slots = generateTimeSlotsFromRanges(
+        allSlots = generateTimeSlotsFromRanges(
           availability.slots as TimeRange[],
           60 // Default duration, could be passed as prop
         )
-        setAvailableSlots(slots)
       }
 
       // Load all booked slots for this tutor (across all bookings)
@@ -84,6 +85,8 @@ export default function SessionRescheduleModal({
         .eq('tutor_id', tutorId)
         .neq('id', bookingId)
 
+      let allBooked: TimeSlot[] = []
+      
       if (otherBookings && otherBookings.length > 0) {
         const { data: otherSessions } = await supabase
           .from('sessions')
@@ -91,21 +94,35 @@ export default function SessionRescheduleModal({
           .in('booking_id', otherBookings.map(b => b.id))
           .in('status', ['scheduled', 'rescheduled'])
 
-        const allBooked = [
+        allBooked = [
           ...(bookings || []),
           ...(otherSessions || [])
         ].map(s => ({
           day: s.scheduled_day,
           time: s.scheduled_time
         }))
-
-        setBookedSlots(allBooked)
       } else {
-        setBookedSlots((bookings || []).map(s => ({
+        allBooked = (bookings || []).map(s => ({
           day: s.scheduled_day,
           time: s.scheduled_time
-        })))
+        }))
       }
+
+      setBookedSlots(allBooked)
+
+      // Filter out unavailable slots, but keep the current session slot visible
+      const filteredAvailableSlots = allSlots.filter(slot => {
+        const isBooked = allBooked.some(booked => 
+          booked.day === slot.day && booked.time === slot.time
+        )
+        const isCurrent = currentSession.scheduled_day === slot.day && 
+                         currentSession.scheduled_time === slot.time
+        
+        // Keep current slot visible (even if booked) and all unbooked slots
+        return !isBooked || isCurrent
+      })
+      
+      setAvailableSlots(filteredAvailableSlots)
     } catch (error) {
       console.error('Error loading availability:', error)
       toast.error('Failed to load available time slots')
@@ -211,7 +228,7 @@ export default function SessionRescheduleModal({
               <div>
                 <h3 className="font-semibold mb-3">Select New Time Slot</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Choose from available slots (unavailable slots are shown in red)
+                  Choose from available slots. Your current time slot is shown but disabled.
                 </p>
 
                 {availableSlots.length === 0 ? (
@@ -234,9 +251,6 @@ export default function SessionRescheduleModal({
                           <div className="flex flex-wrap gap-2">
                             {daySlots.sort((a, b) => a.time.localeCompare(b.time)).map((slot) => {
                               const isSelected = selectedSlot?.day === slot.day && selectedSlot?.time === slot.time
-                              const isBooked = bookedSlots.some(
-                                (s) => s.day === slot.day && s.time === slot.time
-                              )
                               const isCurrent = currentSession.scheduled_day === slot.day && 
                                               currentSession.scheduled_time === slot.time
 
@@ -244,26 +258,25 @@ export default function SessionRescheduleModal({
                                 <button
                                   key={`${day}-${slot.time}`}
                                   type="button"
-                                  onClick={() => setSelectedSlot(slot)}
-                                  disabled={isBooked || isCurrent}
+                                  onClick={() => !isCurrent && setSelectedSlot(slot)}
+                                  disabled={isCurrent}
                                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
                                     isCurrent
-                                      ? 'bg-blue-100 text-blue-600 cursor-not-allowed'
-                                      : isBooked
-                                      ? 'bg-red-100 text-red-400 cursor-not-allowed line-through'
+                                      ? 'bg-blue-100 text-blue-600 cursor-not-allowed border-2 border-blue-300'
                                       : isSelected
                                       ? 'bg-primary-600 text-white'
                                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                   }`}
                                   title={
                                     isCurrent 
-                                      ? 'Current time slot' 
-                                      : isBooked 
-                                      ? 'This slot is already booked' 
+                                      ? 'Current time slot (cannot reschedule to same time)' 
                                       : ''
                                   }
                                 >
                                   {slot.time}
+                                  {isCurrent && (
+                                    <span className="ml-2 text-xs">(current)</span>
+                                  )}
                                 </button>
                               )
                             })}
