@@ -10,8 +10,8 @@ import { useTimezone } from '@/hooks/useTimezone'
 import { Calendar, Clock, Save, Globe, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AvailabilitySelector from '@/components/AvailabilitySelector'
-import { TimezoneSelector, TimezoneInfoDisplay } from '@/components/TimezoneSelector'
-import { DualTimeDisplay } from '@/components/DualTimeDisplay'
+import { TimezoneSelector } from '@/components/TimezoneSelector'
+import { DualTimeDisplay, TimezoneInfoDisplay } from '@/components/DualTimeDisplay'
 import type { TimeRange } from '@/lib/availability'
 
 export default function AvailabilityPage() {

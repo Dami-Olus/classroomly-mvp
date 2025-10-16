@@ -22,8 +22,7 @@ import Link from 'next/link'
 import type { ClassWithTutor } from '@/types'
 import { generateTimeSlotsFromRanges, type TimeRange } from '@/lib/availability'
 import { generateSessions, createSessions } from '@/lib/sessions'
-import { DualTimeDisplay, TimeSlotWithTimezone } from '@/components/DualTimeDisplay'
-import { TimezoneInfoDisplay } from '@/components/TimezoneSelector'
+import { DualTimeDisplay, TimeSlotWithTimezone, TimezoneInfoDisplay } from '@/components/DualTimeDisplay'
 
 interface BookableSlot {
   day: string
