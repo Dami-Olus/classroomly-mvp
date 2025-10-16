@@ -73,7 +73,7 @@ export default function TutorDashboard() {
           )
         `)
         .eq('bookings.classes.tutor_id', tutorData.id)
-        .in('status', ['active', 'scheduled'])
+        .in('status', ['live', 'scheduled'])
 
       const tutorClassrooms = classrooms || []
 

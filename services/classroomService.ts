@@ -4,7 +4,7 @@ export interface ClassroomData {
   id: string
   room_url: string
   booking_id: string
-  status: 'scheduled' | 'active' | 'completed' | 'cancelled'
+  status: 'scheduled' | 'live' | 'completed' | 'cancelled'
   class_info?: {
     title: string
     subject: string

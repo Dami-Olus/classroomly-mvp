@@ -39,9 +39,29 @@ export default function AvailabilityPage() {
         .eq('user_id', profile.id)
         .single()
 
-      if (error) throw error
+      if (error) {
+        // If tutor profile doesn't exist, create it
+        if (error.code === 'PGRST116') {
+          console.log('Tutor profile not found, creating one...')
+          const { data: newTutor, error: createError } = await supabase
+            .from('tutors')
+            .insert({ 
+              user_id: profile.id, 
+              expertise: [],
+              is_active: true 
+            })
+            .select('id, availability')
+            .single()
 
-      if (tutorData) {
+          if (createError) throw createError
+
+          setTutorId(newTutor.id)
+          const slots = (newTutor.availability as any)?.slots || []
+          setAvailableSlots(slots)
+        } else {
+          throw error
+        }
+      } else if (tutorData) {
         setTutorId(tutorData.id)
         const slots = (tutorData.availability as any)?.slots || []
         setAvailableSlots(slots)

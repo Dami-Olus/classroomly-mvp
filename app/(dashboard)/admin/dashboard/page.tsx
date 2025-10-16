@@ -102,7 +102,7 @@ export default function AdminDashboard() {
       const { count: activeClassroomsCount } = await supabase
         .from('classrooms')
         .select('*', { count: 'exact', head: true })
-        .in('status', ['active', 'scheduled'])
+        .in('status', ['live', 'scheduled'])
 
       // Get materials
       const { count: materialsCount } = await supabase

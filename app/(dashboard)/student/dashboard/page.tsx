@@ -28,19 +28,51 @@ export default function StudentDashboard() {
   }, [profile])
 
   const loadDashboardData = async () => {
+    if (!profile?.id) {
+      console.error('No profile found for student')
+      toast.error('Profile not found. Please try logging in again.')
+      setLoading(false)
+      return
+    }
+
     try {
+      console.log('Loading dashboard data for student:', profile?.id)
+      
+      // Test database connection first
+      const { data: testData, error: testError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', profile.id)
+        .single()
+      
+      if (testError) {
+        console.error('Database connection test failed:', testError)
+        throw new Error(`Database connection failed: ${testError.message}`)
+      }
+      
+      console.log('Database connection successful')
+      
       // Load upcoming bookings (simplified query)
       const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
         .select('*, classes(title, subject, duration, tutor_id)')
         .eq('student_id', profile?.id)
-        .in('status', ['confirmed', 'active'])
+        .in('status', ['confirmed', 'rescheduled'])
         .order('created_at', { ascending: false })
         .limit(5)
 
       if (bookingsError) {
         console.error('Error loading bookings:', bookingsError)
-        throw bookingsError
+        // Don't throw error for empty results, just log and continue
+        if (bookingsError.code !== 'PGRST116') {
+          console.error('Bookings error details:', {
+            code: bookingsError.code,
+            message: bookingsError.message,
+            details: bookingsError.details,
+            hint: bookingsError.hint
+          })
+          throw bookingsError
+        }
       }
 
       // Get tutor details for bookings
@@ -79,12 +111,15 @@ export default function StudentDashboard() {
       const { data: classrooms, error: classroomsError } = await supabase
         .from('classrooms')
         .select('*, booking_id')
-        .in('status', ['active', 'scheduled'])
+        .in('status', ['live', 'scheduled'])
         .order('created_at', { ascending: false })
 
       if (classroomsError) {
         console.error('Error loading classrooms:', classroomsError)
-        throw classroomsError
+        // Don't throw error for empty results, just log and continue
+        if (classroomsError.code !== 'PGRST116') {
+          throw classroomsError
+        }
       }
 
       // Filter classrooms for this student by checking booking
@@ -142,10 +177,18 @@ export default function StudentDashboard() {
       setActiveClassrooms(filteredClassrooms)
 
       // Calculate stats
-      const { data: allBookings } = await supabase
+      const { data: allBookings, error: statsError } = await supabase
         .from('bookings')
         .select('status, total_sessions, completed_sessions')
         .eq('student_id', profile?.id)
+
+      if (statsError) {
+        console.error('Error loading stats:', statsError)
+        // Don't throw error for empty results, just log and continue
+        if (statsError.code !== 'PGRST116') {
+          throw statsError
+        }
+      }
 
       const totalBookings = allBookings?.length || 0
       const completedSessions = allBookings?.reduce((sum, b) => sum + (b.completed_sessions || 0), 0) || 0
@@ -158,7 +201,12 @@ export default function StudentDashboard() {
       })
     } catch (error) {
       console.error('Error loading dashboard data:', error)
-      toast.error('Failed to load dashboard data')
+      // Show more specific error message
+      if (error instanceof Error) {
+        toast.error(`Failed to load dashboard data: ${error.message}`)
+      } else {
+        toast.error('Failed to load dashboard data')
+      }
     } finally {
       setLoading(false)
     }

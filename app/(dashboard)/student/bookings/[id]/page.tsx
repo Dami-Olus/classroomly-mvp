@@ -283,7 +283,7 @@ export default function StudentBookingDetailPage() {
   }
 
   const tutorName = `${booking.class.tutor.user.first_name} ${booking.class.tutor.user.last_name}`
-  const canJoinClassroom = booking.classroom && ['active', 'scheduled'].includes(booking.classroom.status)
+  const canJoinClassroom = booking.classroom && ['live', 'scheduled'].includes(booking.classroom.status)
 
   return (
     <ProtectedRoute requiredRole="student">

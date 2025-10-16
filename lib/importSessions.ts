@@ -176,7 +176,7 @@ export async function checkImportConflicts(
       .from('bookings')
       .select('id, student_name, scheduled_slots')
       .eq('tutor_id', tutorId)
-      .in('status', ['confirmed', 'active', 'rescheduled'])
+      .in('status', ['confirmed', 'rescheduled'])
 
     if (!existingBookings) return conflicts
 

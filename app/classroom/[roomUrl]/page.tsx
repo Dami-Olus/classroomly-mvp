@@ -98,7 +98,7 @@ export default function ClassroomPage() {
 
       // Update classroom status to active (don't fail if this doesn't work)
       try {
-        await classroomService.updateClassroomStatus(roomUrl, 'active')
+        await classroomService.updateClassroomStatus(roomUrl, 'live')
       } catch (error) {
         console.warn('Failed to update classroom status, continuing anyway:', error)
       }
