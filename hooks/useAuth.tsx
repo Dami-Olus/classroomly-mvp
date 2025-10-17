@@ -97,26 +97,47 @@ export function useAuth() {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('🔐 Attempting sign in for:', email)
+      
+      // Validate inputs
+      if (!email || !password) {
+        throw new Error('Email and password are required')
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       })
 
+      console.log('🔐 Sign in response:', { data: !!data, error: error?.message })
+
       if (error) {
+        console.error('🔐 Sign in error:', error)
+        
         // Handle specific error cases
         if (error.message?.includes('Email not confirmed')) {
           throw new Error('EMAIL_NOT_CONFIRMED')
         }
+        
+        // Handle 400 Bad Request specifically
+        if (error.message?.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password')
+        }
+        
         throw error
       }
 
+      console.log('🔐 Sign in successful for:', data.user?.email)
       toast.success('Signed in successfully!')
       return { data, error: null }
     } catch (error: any) {
+      console.error('🔐 Sign in catch block:', error)
+      
       if (error.message === 'EMAIL_NOT_CONFIRMED') {
         // Don't show toast here, let the login page handle it
         return { data: null, error: { message: 'EMAIL_NOT_CONFIRMED', email } }
       }
+      
       toast.error(error.message || 'Failed to sign in')
       return { data: null, error }
     }
@@ -157,7 +178,7 @@ export function useAuth() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(updates as Record<string, any>)
         .eq('id', user.id)
         .select()
         .single()
