@@ -95,8 +95,8 @@ export default function AdminDashboard() {
         .select('status, completed_sessions')
 
       const totalBookings = allBookings?.length || 0
-      const completedBookings = allBookings?.filter(b => b.status === 'completed').length || 0
-      const completedSessions = allBookings?.reduce((sum, b) => sum + (b.completed_sessions || 0), 0) || 0
+      const completedBookings = allBookings?.filter((b: any) => b.status === 'completed').length || 0
+      const completedSessions = allBookings?.reduce((sum: number, b: any) => sum + (b.completed_sessions || 0), 0) || 0
 
       // Get active classrooms
       const { count: activeClassroomsCount } = await supabase
