@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/hooks/useAuth'
-import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
-import Link from 'next/link'
+import { Loader2, CheckCircle, XCircle } from 'lucide-react'
+import { Suspense } from 'react'
 
 function AuthCallbackContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -13,11 +12,12 @@ function AuthCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
-  const { profile } = useAuth()
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        console.log('🔐 Processing auth callback...')
+        
         // Get the URL hash parameters that Supabase sends
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
         const accessToken = hashParams.get('access_token')
@@ -25,16 +25,17 @@ function AuthCallbackContent() {
         const error = hashParams.get('error')
         const errorDescription = hashParams.get('error_description')
 
-        console.log('Auth callback params:', { accessToken, refreshToken, error, errorDescription })
+        console.log('🔐 Hash params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, error, errorDescription })
 
         if (error) {
-          console.error('Auth callback error:', error, errorDescription)
+          console.error('🔐 Auth error:', error, errorDescription)
           setStatus('error')
-          setMessage(`Failed to confirm your email: ${errorDescription || error}`)
+          setMessage(`Authentication failed: ${errorDescription || error}`)
           return
         }
 
         if (accessToken && refreshToken) {
+          console.log('🔐 Setting session with tokens from URL...')
           // Set the session with the tokens from the URL
           const { data, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -42,64 +43,73 @@ function AuthCallbackContent() {
           })
 
           if (sessionError) {
-            console.error('Session error:', sessionError)
+            console.error('🔐 Session error:', sessionError)
             setStatus('error')
-            setMessage('Failed to establish session. Please try again.')
+            setMessage(`Session error: ${sessionError.message}`)
             return
           }
 
           if (data.session?.user) {
+            console.log('🔐 User authenticated successfully:', data.session.user.email)
             setStatus('success')
-            setMessage('Email confirmed successfully! Redirecting to your dashboard...')
+            setMessage('Email confirmed successfully! Redirecting...')
             
-            // Wait a moment then redirect based on user role
+            // Redirect to appropriate dashboard based on user role
             setTimeout(() => {
-              if (profile?.role === 'tutor') {
+              // Get user metadata to determine role
+              const userRole = data.session?.user?.user_metadata?.role
+              if (userRole === 'tutor') {
                 router.push('/tutor/dashboard')
               } else {
                 router.push('/student/dashboard')
               }
             }, 2000)
           } else {
+            console.error('🔐 No user in session')
             setStatus('error')
-            setMessage('No active session found. Please try signing in again.')
+            setMessage('No user found in session')
           }
         } else {
+          console.log('🔐 No tokens in URL, checking existing session...')
           // No tokens in URL, check if user is already authenticated
           const { data, error: sessionError } = await supabase.auth.getSession()
           
           if (sessionError) {
-            console.error('Session error:', sessionError)
+            console.error('🔐 Session check error:', sessionError)
             setStatus('error')
-            setMessage('Failed to confirm your email. Please try again.')
+            setMessage(`Session error: ${sessionError.message}`)
             return
           }
 
           if (data.session?.user) {
+            console.log('🔐 User already authenticated:', data.session.user.email)
             setStatus('success')
-            setMessage('Email confirmed successfully! Redirecting to your dashboard...')
+            setMessage('Already authenticated! Redirecting...')
             
+            // Redirect to appropriate dashboard
             setTimeout(() => {
-              if (profile?.role === 'tutor') {
+              const userRole = data.session?.user?.user_metadata?.role
+              if (userRole === 'tutor') {
                 router.push('/tutor/dashboard')
               } else {
                 router.push('/student/dashboard')
               }
             }, 2000)
           } else {
+            console.error('🔐 No existing session found')
             setStatus('error')
-            setMessage('No active session found. Please try signing in again.')
+            setMessage('No authentication session found. Please try signing in again.')
           }
         }
-      } catch (error) {
-        console.error('Callback error:', error)
+      } catch (error: any) {
+        console.error('🔐 Unexpected error in auth callback:', error)
         setStatus('error')
-        setMessage('An unexpected error occurred. Please try again.')
+        setMessage(`Unexpected error: ${error.message}`)
       }
     }
 
     handleAuthCallback()
-  }, [router, supabase, profile])
+  }, [router, supabase])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -109,7 +119,7 @@ function AuthCallbackContent() {
             <>
               <Loader2 className="mx-auto h-12 w-12 text-primary-600 animate-spin" />
               <h2 className="mt-6 text-3xl font-bold text-gray-900">
-                Confirming your email...
+                Confirming Email...
               </h2>
               <p className="mt-2 text-sm text-gray-600">
                 Please wait while we verify your email address.
@@ -126,39 +136,25 @@ function AuthCallbackContent() {
               <p className="mt-2 text-sm text-gray-600">
                 {message}
               </p>
-              <div className="mt-6">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                  Continue to Login
-                </Link>
-              </div>
             </>
           )}
 
           {status === 'error' && (
             <>
-              <AlertCircle className="mx-auto h-12 w-12 text-red-600" />
+              <XCircle className="mx-auto h-12 w-12 text-red-600" />
               <h2 className="mt-6 text-3xl font-bold text-gray-900">
                 Confirmation Failed
               </h2>
               <p className="mt-2 text-sm text-gray-600">
                 {message}
               </p>
-              <div className="mt-6 space-y-3">
-                <Link
-                  href="/login"
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              <div className="mt-6">
+                <button
+                  onClick={() => router.push('/login')}
+                  className="btn-primary"
                 >
-                  Try Signing In
-                </Link>
-                <Link
-                  href="/signup"
-                  className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                  Create New Account
-                </Link>
+                  Go to Login
+                </button>
               </div>
             </>
           )}
