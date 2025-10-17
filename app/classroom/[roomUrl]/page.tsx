@@ -222,27 +222,8 @@ export default function ClassroomPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {showWhiteboard ? (
-          /* Whiteboard View */
-          <div className="flex-1 flex flex-col">
-            <WhiteboardToggle
-              roomId={roomUrl}
-              isTutor={classroomData.class_info?.tutor_id === profile?.id}
-              onSave={(data) => {
-                console.log('Whiteboard saved:', data)
-                toast.success('Whiteboard session saved!')
-              }}
-              videoContainer={containerRef}
-              isJoined={isJoined}
-              isConnecting={isConnecting}
-              callFrame={callFrame}
-              onJoinClassroom={handleJoinClassroom}
-              error={error || undefined}
-            />
-          </div>
-        ) : (
-          /* Video Area */
-          <div className="flex-1 flex flex-col">
+        {/* Video Container - Always present */}
+        <div className="flex-1 flex flex-col">
           {/* Video Container */}
           <div className="flex-1 bg-black relative">
             {/* Daily.co iframe container */}
@@ -301,8 +282,27 @@ export default function ClassroomPage() {
               </div>
             )}
           </div>
+          
+          {/* Whiteboard Overlay */}
+          {showWhiteboard && (
+            <div className="absolute inset-0 z-10 bg-white">
+              <WhiteboardToggle
+                roomId={roomUrl}
+                isTutor={profile?.role === 'tutor'}
+                onSave={(data) => {
+                  console.log('Whiteboard saved:', data)
+                  toast.success('Whiteboard session saved!')
+                }}
+                videoContainer={containerRef}
+                isJoined={isJoined}
+                isConnecting={isConnecting}
+                callFrame={callFrame}
+                onJoinClassroom={handleJoinClassroom}
+                error={error || undefined}
+              />
+            </div>
+          )}
         </div>
-        )}
 
         {/* Sidebar */}
         {(showChat || showMaterials) && isJoined && !showWhiteboard && (
