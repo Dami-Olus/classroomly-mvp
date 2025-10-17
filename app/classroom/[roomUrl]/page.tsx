@@ -13,8 +13,10 @@ import {
   AlertCircle,
   Loader2,
   Palette,
+  X,
 } from 'lucide-react'
 import { WhiteboardToggle } from '@/components/WhiteboardToggle'
+import { Whiteboard } from '@/components/Whiteboard'
 import toast from 'react-hot-toast'
 
 export default function ClassroomPage() {
@@ -285,21 +287,27 @@ export default function ClassroomPage() {
           
           {/* Whiteboard Overlay */}
           {showWhiteboard && (
-            <div className="absolute inset-0 z-10 bg-white">
-              <WhiteboardToggle
-                roomId={roomUrl}
-                isTutor={profile?.role === 'tutor'}
-                onSave={(data) => {
-                  console.log('Whiteboard saved:', data)
-                  toast.success('Whiteboard session saved!')
-                }}
-                videoContainer={containerRef}
-                isJoined={isJoined}
-                isConnecting={isConnecting}
-                callFrame={callFrame}
-                onJoinClassroom={handleJoinClassroom}
-                error={error || undefined}
-              />
+            <div className="absolute inset-0 z-10 bg-white flex flex-col">
+              <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
+                <h3 className="font-semibold text-gray-900">Collaborative Whiteboard</h3>
+                <button
+                  onClick={() => setShowWhiteboard(false)}
+                  className="btn-secondary text-sm flex items-center gap-1"
+                >
+                  <X className="w-4 h-4" />
+                  Hide Whiteboard
+                </button>
+              </div>
+              <div className="flex-1">
+                <Whiteboard
+                  roomId={roomUrl}
+                  isTutor={profile?.role === 'tutor'}
+                  onSave={(data) => {
+                    console.log('Whiteboard saved:', data)
+                    toast.success('Whiteboard session saved!')
+                  }}
+                />
+              </div>
             </div>
           )}
         </div>

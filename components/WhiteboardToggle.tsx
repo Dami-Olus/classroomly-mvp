@@ -14,9 +14,10 @@ interface WhiteboardToggleProps {
   callFrame?: any
   onJoinClassroom?: () => void
   error?: string
+  onClose?: () => void
 }
 
-export function WhiteboardToggle({ roomId, isTutor, onSave, videoContainer, isJoined, isConnecting, callFrame, onJoinClassroom, error }: WhiteboardToggleProps) {
+export function WhiteboardToggle({ roomId, isTutor, onSave, videoContainer, isJoined, isConnecting, callFrame, onJoinClassroom, error, onClose }: WhiteboardToggleProps) {
   const [showWhiteboard, setShowWhiteboard] = useState(false)
   const [viewMode, setViewMode] = useState<'video' | 'whiteboard' | 'split'>('video')
 
@@ -45,7 +46,8 @@ export function WhiteboardToggle({ roomId, isTutor, onSave, videoContainer, isJo
   return (
     <div className="whiteboard-toggle-container">
       {/* Control buttons */}
-      <div className="flex items-center gap-2 p-3 bg-gray-50 border-b">
+      <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
+        <div className="flex items-center gap-2">
         <button
           onClick={switchToVideo}
           className={`text-sm flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
@@ -82,6 +84,18 @@ export function WhiteboardToggle({ roomId, isTutor, onSave, videoContainer, isJo
           <Video className="w-4 h-4" />
           Split View
         </button>
+        </div>
+        
+        {/* Close button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="btn-secondary text-sm flex items-center gap-1"
+          >
+            <X className="w-4 h-4" />
+            Hide Whiteboard
+          </button>
+        )}
       </div>
 
       {/* Content area */}
@@ -90,10 +104,14 @@ export function WhiteboardToggle({ roomId, isTutor, onSave, videoContainer, isJo
           <div className="flex-1 flex">
             {/* Video panel */}
             <div className="flex-1 border-r bg-black relative">
-              {/* Daily.co iframe container */}
-              {videoContainer && (
-                <div ref={videoContainer} className="w-full h-full" />
-              )}
+              {/* Note: Video container is handled by parent component */}
+              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                <div className="text-center text-gray-600">
+                  <Video className="w-12 h-12 mx-auto mb-2" />
+                  <p>Video will be displayed here</p>
+                  <p className="text-sm">(Daily.co integration)</p>
+                </div>
+              </div>
               
               {/* Join overlay - only show if we haven't started connecting yet */}
               {!isJoined && !isConnecting && !callFrame && onJoinClassroom && (
