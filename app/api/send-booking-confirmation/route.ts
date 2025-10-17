@@ -7,6 +7,15 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Resend is configured
+    if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'placeholder') {
+      console.error('📧 RESEND_API_KEY not configured')
+      return NextResponse.json(
+        { error: 'Email service not configured. RESEND_API_KEY is missing.' },
+        { status: 500 }
+      )
+    }
+
     const body = await request.json()
     const {
       studentName,
@@ -21,6 +30,10 @@ export async function POST(request: NextRequest) {
       notes,
     } = body
 
+    console.log('📧 Sending booking confirmation emails...')
+    console.log('📧 Student:', { name: studentName, email: studentEmail })
+    console.log('📧 Tutor:', { name: tutorName, email: tutorEmail })
+
     // Send confirmation email to student
     const studentEmailHtml = generateBookingConfirmationEmail({
       studentName,
@@ -32,12 +45,15 @@ export async function POST(request: NextRequest) {
       bookingId,
     })
 
+    console.log('📧 Sending student email...')
     const studentEmailResult = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to: studentEmail,
       subject: `Booking Confirmed: ${className}`,
       html: studentEmailHtml,
     })
+
+    console.log('📧 Student email result:', studentEmailResult)
 
     // Send notification email to tutor
     const tutorEmailHtml = generateTutorBookingNotificationEmail({
@@ -49,6 +65,7 @@ export async function POST(request: NextRequest) {
       notes,
     })
 
+    console.log('📧 Sending tutor email...')
     const tutorEmailResult = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to: tutorEmail,
@@ -56,13 +73,15 @@ export async function POST(request: NextRequest) {
       html: tutorEmailHtml,
     })
 
+    console.log('📧 Tutor email result:', tutorEmailResult)
+
     return NextResponse.json({
       success: true,
       studentEmail: studentEmailResult,
       tutorEmail: tutorEmailResult,
     })
   } catch (error: any) {
-    console.error('Error sending emails:', error)
+    console.error('📧 Error sending emails:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to send emails' },
       { status: 500 }

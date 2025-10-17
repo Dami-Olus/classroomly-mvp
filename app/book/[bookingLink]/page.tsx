@@ -354,7 +354,17 @@ export default function PublicBookingPage() {
         const tutor = classData.tutor as any
         const tutorUser = tutor?.user
         
-        await fetch('/api/send-booking-confirmation', {
+        console.log('📧 Attempting to send booking confirmation emails...')
+        console.log('Tutor info:', { 
+          name: `${tutorUser?.first_name} ${tutorUser?.last_name}`, 
+          email: tutorUser?.email 
+        })
+        console.log('Student info:', { 
+          name: formData.studentName, 
+          email: formData.studentEmail 
+        })
+        
+        const emailResponse = await fetch('/api/send-booking-confirmation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -370,13 +380,22 @@ export default function PublicBookingPage() {
             notes: formData.notes,
           }),
         })
+
+        if (!emailResponse.ok) {
+          const errorData = await emailResponse.json()
+          console.error('📧 Email API error:', errorData)
+          toast.error('Booking created but email notification failed. Please contact support.')
+        } else {
+          const emailData = await emailResponse.json()
+          console.log('📧 Emails sent successfully:', emailData)
+          toast.success('Booking confirmed! Check your email for details.')
+        }
       } catch (emailError) {
-        console.error('Failed to send emails:', emailError)
-        // Don't fail the booking if email fails
+        console.error('📧 Failed to send emails:', emailError)
+        toast.error('Booking created but email notification failed. Please contact support.')
       }
 
       setSuccess(true)
-      toast.success('Booking confirmed! Check your email for details.')
     } catch (error: any) {
       console.error('Error creating booking:', error)
       toast.error(error.message || 'Failed to create booking')
