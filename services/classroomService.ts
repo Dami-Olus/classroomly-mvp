@@ -221,11 +221,17 @@ export class ClassroomService {
           .eq('id', bookingData.class_id)
           .single()
 
-        if (!classError && classData?.tutors?.profiles?.email) {
-          const tutorEmail = classData.tutors.profiles.email
-          if (tutorEmail.toLowerCase() === userEmail.toLowerCase()) {
-            console.log('✅ Tutor access granted for:', userEmail)
-            return true
+        if (!classError && classData?.tutors && Array.isArray(classData.tutors) && classData.tutors.length > 0) {
+          const tutor = classData.tutors[0]
+          if (tutor?.profiles && Array.isArray(tutor.profiles) && tutor.profiles.length > 0) {
+            const profile = tutor.profiles[0]
+            if (profile?.email) {
+              const tutorEmail = profile.email
+              if (tutorEmail.toLowerCase() === userEmail.toLowerCase()) {
+                console.log('✅ Tutor access granted for:', userEmail)
+                return true
+              }
+            }
           }
         }
       }
