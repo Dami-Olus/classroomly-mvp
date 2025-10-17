@@ -172,7 +172,7 @@ export default function AdminDashboard() {
         .order('created_at', { ascending: false })
         .limit(5)
 
-      recentProfiles?.forEach(p => {
+      recentProfiles?.forEach((p: any) => {
         activity.push({
           type: 'signup',
           description: `${p.first_name} ${p.last_name} signed up as ${p.role}`,
@@ -190,11 +190,11 @@ export default function AdminDashboard() {
 
       // Get tutor info for each class
       for (const c of recentClasses || []) {
-        if (c.tutor_id) {
+        if ((c as any).tutor_id) {
           const { data: tutor } = await supabase
             .from('tutors')
             .select('user_id')
-            .eq('id', c.tutor_id)
+            .eq('id', (c as any).tutor_id)
             .single()
 
           if (tutor?.user_id) {
@@ -205,11 +205,11 @@ export default function AdminDashboard() {
               .single()
 
             if (profile) {
-              const tutorName = `${profile.first_name} ${profile.last_name}`
+              const tutorName = `${(profile as any).first_name} ${(profile as any).last_name}`
               activity.push({
                 type: 'class_created',
-                description: `${tutorName} created class: ${c.title}`,
-                timestamp: c.created_at,
+                description: `${tutorName} created class: ${(c as any).title}`,
+                timestamp: (c as any).created_at,
                 user: tutorName,
               })
             }
