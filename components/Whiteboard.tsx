@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Loader2, Maximize2, Minimize2, Save, Download } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { whiteboardService } from '@/services/whiteboardService'
 
@@ -83,33 +82,27 @@ export function Whiteboard({ roomId, isTutor, onSave, className = '' }: Whiteboa
         <div className="flex items-center gap-2">
           {isTutor && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={handleSave}
-                className="flex items-center gap-1"
+                className="btn-secondary text-sm flex items-center gap-1"
               >
                 <Save className="w-4 h-4" />
                 Save
-              </Button>
+              </button>
               
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={handleDownload}
-                className="flex items-center gap-1"
+                className="btn-secondary text-sm flex items-center gap-1"
               >
                 <Download className="w-4 h-4" />
                 Export
-              </Button>
+              </button>
             </>
           )}
           
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             onClick={toggleFullscreen}
-            className="flex items-center gap-1"
+            className="btn-secondary text-sm flex items-center gap-1"
           >
             {isFullscreen ? (
               <>
@@ -122,7 +115,7 @@ export function Whiteboard({ roomId, isTutor, onSave, className = '' }: Whiteboa
                 Fullscreen
               </>
             )}
-          </Button>
+          </button>
         </div>
       </div>
 

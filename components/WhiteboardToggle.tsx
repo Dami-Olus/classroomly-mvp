@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Whiteboard } from './Whiteboard'
 import { Palette, Video, X } from 'lucide-react'
 
@@ -41,36 +40,42 @@ export function WhiteboardToggle({ roomId, isTutor, onSave }: WhiteboardTogglePr
     <div className="whiteboard-toggle-container">
       {/* Control buttons */}
       <div className="flex items-center gap-2 p-3 bg-gray-50 border-b">
-        <Button
-          variant={viewMode === 'video' ? 'default' : 'outline'}
-          size="sm"
+        <button
           onClick={switchToVideo}
-          className="flex items-center gap-1"
+          className={`text-sm flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+            viewMode === 'video' 
+              ? 'bg-primary-600 text-white' 
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
         >
           <Video className="w-4 h-4" />
           Video Only
-        </Button>
+        </button>
         
-        <Button
-          variant={viewMode === 'whiteboard' ? 'default' : 'outline'}
-          size="sm"
+        <button
           onClick={switchToWhiteboard}
-          className="flex items-center gap-1"
+          className={`text-sm flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+            viewMode === 'whiteboard' 
+              ? 'bg-primary-600 text-white' 
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
         >
           <Palette className="w-4 h-4" />
           Whiteboard Only
-        </Button>
+        </button>
         
-        <Button
-          variant={viewMode === 'split' ? 'default' : 'outline'}
-          size="sm"
+        <button
           onClick={switchToSplit}
-          className="flex items-center gap-1"
+          className={`text-sm flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+            viewMode === 'split' 
+              ? 'bg-primary-600 text-white' 
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
         >
           <Palette className="w-4 h-4" />
           <Video className="w-4 h-4" />
           Split View
-        </Button>
+        </button>
       </div>
 
       {/* Content area */}
