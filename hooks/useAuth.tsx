@@ -102,11 +102,21 @@ export function useAuth() {
         password,
       })
 
-      if (error) throw error
+      if (error) {
+        // Handle specific error cases
+        if (error.message?.includes('Email not confirmed')) {
+          throw new Error('EMAIL_NOT_CONFIRMED')
+        }
+        throw error
+      }
 
       toast.success('Signed in successfully!')
       return { data, error: null }
     } catch (error: any) {
+      if (error.message === 'EMAIL_NOT_CONFIRMED') {
+        // Don't show toast here, let the login page handle it
+        return { data: null, error: { message: 'EMAIL_NOT_CONFIRMED', email } }
+      }
       toast.error(error.message || 'Failed to sign in')
       return { data: null, error }
     }
@@ -121,6 +131,23 @@ export function useAuth() {
       router.push('/')
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign out')
+    }
+  }
+
+  const resendConfirmation = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      })
+
+      if (error) throw error
+
+      toast.success('Confirmation email sent! Please check your inbox.')
+      return { error: null }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send confirmation email')
+      return { error }
     }
   }
 
@@ -154,6 +181,7 @@ export function useAuth() {
     signIn,
     signOut,
     updateProfile,
+    resendConfirmation,
     isAuthenticated: !!user,
   }
 }
