@@ -306,7 +306,6 @@ export default function ClassroomPage() {
                 <Whiteboard
                   roomId={roomUrl}
                   isTutor={profile?.role === 'tutor'}
-                  userId={user?.id}
                   onSave={(data) => {
                     console.log('Whiteboard saved:', data)
                     toast.success('Whiteboard session saved!')
