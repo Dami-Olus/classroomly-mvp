@@ -227,11 +227,17 @@ export default function ClassroomPage() {
           <div className="flex-1 flex flex-col">
             <WhiteboardToggle
               roomId={roomUrl}
-              isTutor={classroomData.tutor_id === profile?.id}
+              isTutor={classroomData.class_info?.tutor_id === profile?.id}
               onSave={(data) => {
                 console.log('Whiteboard saved:', data)
                 toast.success('Whiteboard session saved!')
               }}
+              videoContainer={containerRef}
+              isJoined={isJoined}
+              isConnecting={isConnecting}
+              callFrame={callFrame}
+              onJoinClassroom={handleJoinClassroom}
+              error={error || undefined}
             />
           </div>
         ) : (
