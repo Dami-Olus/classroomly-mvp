@@ -125,7 +125,7 @@ export default function AdminDashboard() {
         .from('classes')
         .select('tutor_id')
       
-      const uniqueTutorsWithClasses = new Set(tutorsWithClasses?.map(c => c.tutor_id) || []).size
+      const uniqueTutorsWithClasses = new Set(tutorsWithClasses?.map((c: any) => c.tutor_id) || []).size
 
       // Get students with bookings
       const { data: studentsWithBookings } = await supabase
@@ -133,7 +133,7 @@ export default function AdminDashboard() {
         .select('student_id')
         .not('student_id', 'is', null)
       
-      const uniqueStudentsWithBookings = new Set(studentsWithBookings?.map(b => b.student_id) || []).size
+      const uniqueStudentsWithBookings = new Set(studentsWithBookings?.map((b: any) => b.student_id) || []).size
 
       setStats({
         totalUsers: usersCount || 0,
