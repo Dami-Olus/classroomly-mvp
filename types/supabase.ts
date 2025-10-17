@@ -155,6 +155,8 @@ export type Database = {
           status: 'pending' | 'confirmed' | 'rescheduled' | 'completed' | 'cancelled'
           total_sessions: number
           completed_sessions: number
+          sessions_per_week: number
+          start_date: string
           notes: string | null
           created_at: string
           updated_at: string
@@ -169,6 +171,8 @@ export type Database = {
           status?: 'pending' | 'confirmed' | 'rescheduled' | 'completed' | 'cancelled'
           total_sessions: number
           completed_sessions?: number
+          sessions_per_week: number
+          start_date: string
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -183,7 +187,59 @@ export type Database = {
           status?: 'pending' | 'confirmed' | 'rescheduled' | 'completed' | 'cancelled'
           total_sessions?: number
           completed_sessions?: number
+          sessions_per_week?: number
+          start_date?: string
           notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      sessions: {
+        Row: {
+          id: string
+          booking_id: string
+          session_number: number
+          scheduled_date: string
+          scheduled_time: string
+          scheduled_day: string
+          duration: number
+          status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'no_show'
+          classroom_id: string | null
+          completed_at: string | null
+          cancelled_at: string | null
+          cancellation_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          booking_id: string
+          session_number: number
+          scheduled_date: string
+          scheduled_time: string
+          scheduled_day: string
+          duration: number
+          status?: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'no_show'
+          classroom_id?: string | null
+          completed_at?: string | null
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          booking_id?: string
+          session_number?: number
+          scheduled_date?: string
+          scheduled_time?: string
+          scheduled_day?: string
+          duration?: number
+          status?: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'no_show'
+          classroom_id?: string | null
+          completed_at?: string | null
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -192,6 +248,7 @@ export type Database = {
         Row: {
           id: string
           booking_id: string
+          session_id: string | null
           session_date: string
           room_url: string
           video_co_room_id: string | null
@@ -206,6 +263,7 @@ export type Database = {
         Insert: {
           id?: string
           booking_id: string
+          session_id?: string | null
           session_date: string
           room_url: string
           video_co_room_id?: string | null
@@ -220,6 +278,7 @@ export type Database = {
         Update: {
           id?: string
           booking_id?: string
+          session_id?: string | null
           session_date?: string
           room_url?: string
           video_co_room_id?: string | null
@@ -273,45 +332,261 @@ export type Database = {
       materials: {
         Row: {
           id: string
-          classroom_id: string
-          uploader_id: string
+          booking_id: string
+          session_id: string | null
+          uploaded_by: string
           uploader_name: string
           file_name: string
           file_url: string
-          file_type: string
           file_size: number
+          file_type: string
           description: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          classroom_id: string
-          uploader_id: string
+          booking_id: string
+          session_id?: string | null
+          uploaded_by: string
           uploader_name: string
           file_name: string
           file_url: string
-          file_type: string
           file_size: number
+          file_type: string
           description?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          classroom_id?: string
-          uploader_id?: string
+          booking_id?: string
+          session_id?: string | null
+          uploaded_by?: string
           uploader_name?: string
           file_name?: string
           file_url?: string
-          file_type?: string
           file_size?: number
+          file_type?: string
           description?: string | null
           created_at?: string
           updated_at?: string
         }
       }
+      class_notes: {
+        Row: {
+          id: string
+          class_id: string
+          tutor_id: string
+          student_background: Json
+          learning_style: Json
+          goals: Json
+          parent_contact: Json
+          special_considerations: Json
+          overall_notes: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          class_id: string
+          tutor_id: string
+          student_background: Json
+          learning_style: Json
+          goals: Json
+          parent_contact: Json
+          special_considerations: Json
+          overall_notes: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          class_id?: string
+          tutor_id?: string
+          student_background?: Json
+          learning_style?: Json
+          goals?: Json
+          parent_contact?: Json
+          special_considerations?: Json
+          overall_notes?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      session_notes: {
+        Row: {
+          id: string
+          session_id: string
+          tutor_id: string
+          notes: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          tutor_id: string
+          notes: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          tutor_id?: string
+          notes?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      class_reports: {
+        Row: {
+          id: string
+          class_id: string
+          booking_id: string
+          tutor_id: string
+          student_id: string
+          report_period: string
+          start_date: string
+          end_date: string
+          sessions_completed: number
+          total_hours: number
+          overall_summary: string
+          strengths: string
+          areas_for_improvement: string
+          next_steps: string
+          is_shared_with_student: boolean
+          shared_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          class_id: string
+          booking_id: string
+          tutor_id: string
+          student_id: string
+          report_period: string
+          start_date: string
+          end_date: string
+          sessions_completed: number
+          total_hours: number
+          overall_summary: string
+          strengths: string
+          areas_for_improvement: string
+          next_steps: string
+          is_shared_with_student?: boolean
+          shared_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          class_id?: string
+          booking_id?: string
+          tutor_id?: string
+          student_id?: string
+          report_period?: string
+          start_date?: string
+          end_date?: string
+          sessions_completed?: number
+          total_hours?: number
+          overall_summary?: string
+          strengths?: string
+          areas_for_improvement?: string
+          next_steps?: string
+          is_shared_with_student?: boolean
+          shared_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      reschedule_requests: {
+        Row: {
+          id: string
+          booking_id: string
+          session_id: string | null
+          requested_by: string
+          original_slot: Json
+          proposed_slot: Json
+          reason: string
+          status: 'pending' | 'accepted' | 'declined'
+          response_note: string | null
+          responded_by: string | null
+          responded_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          booking_id: string
+          session_id?: string | null
+          requested_by: string
+          original_slot: Json
+          proposed_slot: Json
+          reason: string
+          status?: 'pending' | 'accepted' | 'declined'
+          response_note?: string | null
+          responded_by?: string | null
+          responded_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          booking_id?: string
+          session_id?: string | null
+          requested_by?: string
+          original_slot?: Json
+          proposed_slot?: Json
+          reason?: string
+          status?: 'pending' | 'accepted' | 'declined'
+          response_note?: string | null
+          responded_by?: string | null
+          responded_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      whiteboard_sessions: {
+        Row: {
+          id: string
+          room_id: string
+          session_data: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          session_data?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          room_id?: string
+          session_data?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      user_role: 'tutor' | 'student' | 'admin'
+      booking_status: 'pending' | 'confirmed' | 'rescheduled' | 'completed' | 'cancelled'
+      classroom_status: 'scheduled' | 'live' | 'completed' | 'cancelled'
+      message_type: 'text' | 'file' | 'system'
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
-
