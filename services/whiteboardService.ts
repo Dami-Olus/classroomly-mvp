@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 
 export interface WhiteboardSession {
   id: string
@@ -20,6 +20,7 @@ class WhiteboardService {
    */
   async saveWhiteboardSession(roomId: string, data: WhiteboardData): Promise<WhiteboardSession> {
     try {
+      const supabase = createClient()
       const { data: session, error } = await supabase
         .from('whiteboard_sessions')
         .upsert({
@@ -47,6 +48,7 @@ class WhiteboardService {
    */
   async loadWhiteboardSession(roomId: string): Promise<WhiteboardSession | null> {
     try {
+      const supabase = createClient()
       const { data: session, error } = await supabase
         .from('whiteboard_sessions')
         .select('*')
@@ -74,6 +76,7 @@ class WhiteboardService {
    */
   async deleteWhiteboardSession(roomId: string): Promise<void> {
     try {
+      const supabase = createClient()
       const { error } = await supabase
         .from('whiteboard_sessions')
         .delete()
@@ -94,6 +97,7 @@ class WhiteboardService {
    */
   async getUserWhiteboardSessions(userId: string): Promise<WhiteboardSession[]> {
     try {
+      const supabase = createClient()
       const { data: sessions, error } = await supabase
         .from('whiteboard_sessions')
         .select(`
@@ -130,6 +134,7 @@ class WhiteboardService {
    */
   async validateWhiteboardAccess(roomId: string, userId: string): Promise<boolean> {
     try {
+      const supabase = createClient()
       const { data: classroom, error } = await supabase
         .from('classrooms')
         .select('tutor_id, student_id')
