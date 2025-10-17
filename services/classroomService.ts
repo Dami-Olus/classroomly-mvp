@@ -30,6 +30,8 @@ export class ClassroomService {
 
   async loadClassroom(roomUrl: string): Promise<ClassroomData | null> {
     try {
+      console.log('🔍 Loading classroom for room URL:', roomUrl)
+      
       // First, get the classroom data
       const { data: classroomData, error: classroomError } = await this.supabase
         .from('classrooms')
@@ -38,13 +40,25 @@ export class ClassroomService {
         .single()
 
       if (classroomError) {
-        console.error('Error loading classroom:', classroomError)
+        console.error('❌ Error loading classroom:', classroomError)
+        if (classroomError.code === 'PGRST116') {
+          console.log('❌ No classroom found with room URL:', roomUrl)
+          // Let's check if there are any classrooms at all
+          const { data: allClassrooms } = await this.supabase
+            .from('classrooms')
+            .select('id, room_url, status')
+            .limit(5)
+          console.log('📋 Available classrooms:', allClassrooms)
+        }
         return null
       }
 
       if (!classroomData) {
+        console.log('❌ No classroom data returned for room URL:', roomUrl)
         return null
       }
+
+      console.log('✅ Found classroom:', classroomData.id)
 
       // Then get the booking data
       const { data: bookingData, error: bookingError } = await this.supabase
@@ -179,11 +193,23 @@ export class ClassroomService {
 
   async validateRoomAccess(roomUrl: string, userEmail?: string): Promise<boolean> {
     try {
-      const classroom = await this.loadClassroom(roomUrl)
+      console.log('🔐 Validating room access for:', { roomUrl, userEmail })
+      
+      let classroom = await this.loadClassroom(roomUrl)
       
       if (!classroom) {
         console.log('❌ No classroom found for room URL:', roomUrl)
-        return false
+        console.log('🔄 Attempting to create classroom on-demand...')
+        
+        // Try to create a classroom on-demand
+        const createdClassroom = await this.createClassroomOnDemand(roomUrl, userEmail)
+        if (createdClassroom) {
+          console.log('✅ Classroom created successfully:', createdClassroom.id)
+          classroom = createdClassroom
+        } else {
+          console.log('❌ Failed to create classroom on-demand')
+          return false
+        }
       }
 
       // If user is not logged in, allow access for now (MVP)
@@ -243,6 +269,117 @@ export class ClassroomService {
     } catch (error) {
       console.error('Error validating room access:', error)
       return false
+    }
+  }
+
+  /**
+   * Create a classroom on-demand when someone tries to access it
+   */
+  async createClassroomOnDemand(roomUrl: string, userEmail?: string): Promise<ClassroomData | null> {
+    try {
+      console.log('🏗️ Creating classroom on-demand for room URL:', roomUrl)
+      
+      // Try to find a session that matches this room URL
+      const { data: sessions, error: sessionsError } = await this.supabase
+        .from('sessions')
+        .select(`
+          id,
+          booking_id,
+          scheduled_date,
+          scheduled_time,
+          duration,
+          bookings!inner(
+            id,
+            student_email,
+            class_id,
+            classes!inner(
+              id,
+              tutor_id,
+              duration
+            )
+          )
+        `)
+        .eq('classroom_id', roomUrl) // Try to match by classroom_id first
+        .limit(1)
+
+      if (sessionsError) {
+        console.error('❌ Error finding session by classroom_id:', sessionsError)
+        return null
+      }
+
+      let session = sessions?.[0]
+
+      // If no session found by classroom_id, try to find by user email
+      if (!session && userEmail) {
+        console.log('🔍 No session found by classroom_id, trying to find by user email...')
+        
+        const { data: booking, error: bookingError } = await this.supabase
+          .from('bookings')
+          .select(`
+            id,
+            student_email,
+            class_id,
+            classes!inner(
+              id,
+              tutor_id,
+              duration
+            )
+          `)
+          .eq('student_email', userEmail)
+          .limit(1)
+          .single()
+
+        if (bookingError || !booking) {
+          console.error('❌ No booking found for user email:', userEmail)
+          return null
+        }
+
+        // Create a basic session structure for the classroom
+        const classData = Array.isArray(booking.classes) ? booking.classes[0] : booking.classes
+        session = {
+          id: `temp-${Date.now()}`,
+          booking_id: booking.id,
+          scheduled_date: new Date().toISOString().split('T')[0],
+          scheduled_time: '12:00',
+          duration: classData?.duration || 60,
+          bookings: booking as any // Type assertion to avoid complex typing issues
+        }
+      }
+
+      if (!session) {
+        console.error('❌ No session found to create classroom for')
+        return null
+      }
+
+      // Create the classroom
+      const classroomData = {
+        booking_id: session.booking_id,
+        session_date: new Date(`${session.scheduled_date}T${session.scheduled_time}`).toISOString(),
+        room_url: roomUrl,
+        status: 'scheduled' as const,
+        duration: session.duration,
+      }
+
+      console.log('🏗️ Creating classroom with data:', classroomData)
+
+      const { data: newClassroom, error: classroomError } = await this.supabase
+        .from('classrooms')
+        .insert(classroomData)
+        .select('*')
+        .single()
+
+      if (classroomError) {
+        console.error('❌ Error creating classroom:', classroomError)
+        return null
+      }
+
+      console.log('✅ Classroom created successfully:', newClassroom.id)
+
+      // Load the full classroom data
+      return await this.loadClassroom(roomUrl)
+    } catch (error: any) {
+      console.error('❌ Error in createClassroomOnDemand:', error)
+      return null
     }
   }
 }
