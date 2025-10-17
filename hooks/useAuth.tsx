@@ -81,7 +81,13 @@ export function useAuth() {
 
       if (error) throw error
 
-      toast.success('Welcome to Classroomly! Account created successfully!')
+      // Check if email confirmation is required
+      if (data.user && !data.user.email_confirmed_at) {
+        toast.success('Account created! Please check your email and click the confirmation link.')
+      } else {
+        toast.success('Welcome to Classroomly! Account created successfully!')
+      }
+      
       return { data, error: null }
     } catch (error: any) {
       toast.error(error.message || 'Failed to create account')

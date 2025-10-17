@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { Mail, Lock, User, UserCheck, UserCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -13,6 +14,7 @@ export default function SignupPage() {
   const [lastName, setLastName] = useState('')
   const [role, setRole] = useState<'tutor' | 'student'>('student')
   const [loading, setLoading] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
   const { signUp } = useAuth()
   const router = useRouter()
 
@@ -29,14 +31,60 @@ export default function SignupPage() {
     )
 
     if (!error && data?.user) {
-      if (role === 'tutor') {
-        router.push('/tutor/dashboard')
+      // Check if email confirmation is required
+      if (data.user.email_confirmed_at) {
+        // Email already confirmed, redirect to dashboard
+        if (role === 'tutor') {
+          router.push('/tutor/dashboard')
+        } else {
+          router.push('/student/dashboard')
+        }
       } else {
-        router.push('/student/dashboard')
+        // Email confirmation required, show message
+        setEmailSent(true)
+        // Don't redirect immediately - let user check email
       }
     }
 
     setLoading(false)
+  }
+
+  // Show email confirmation message if email was sent
+  if (emailSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-100 px-4 py-8">
+        <div className="w-full max-w-md">
+          <div className="card">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <Mail className="h-6 w-6 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Check Your Email
+              </h2>
+              <p className="text-gray-600 mb-6">
+                We've sent a confirmation link to <strong>{email}</strong>. 
+                Please click the link in your email to complete your registration.
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => setEmailSent(false)}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  Try Again
+                </button>
+                <Link
+                  href="/login"
+                  className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  Back to Login
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
