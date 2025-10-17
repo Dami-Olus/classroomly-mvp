@@ -182,21 +182,58 @@ export class ClassroomService {
       const classroom = await this.loadClassroom(roomUrl)
       
       if (!classroom) {
+        console.log('❌ No classroom found for room URL:', roomUrl)
         return false
       }
 
       // If user is not logged in, allow access for now (MVP)
       if (!userEmail) {
+        console.log('✅ No user email provided, allowing access (MVP mode)')
         return true
       }
 
-      // Check if user is the student or tutor for this booking
-      if (classroom.booking_info?.student_email === userEmail) {
+      // Check if user is the student for this booking
+      const studentEmail = classroom.booking_info?.student_email
+      if (studentEmail && studentEmail.toLowerCase() === userEmail.toLowerCase()) {
+        console.log('✅ Student access granted for:', userEmail)
         return true
       }
 
-      // Additional tutor validation could be added here
-      return true
+      // Check if user is the tutor for this class
+      // First get the booking to find the class_id
+      const { data: bookingData, error: bookingError } = await this.supabase
+        .from('bookings')
+        .select('class_id')
+        .eq('id', classroom.booking_id)
+        .single()
+
+      if (!bookingError && bookingData?.class_id) {
+        const { data: classData, error: classError } = await this.supabase
+          .from('classes')
+          .select(`
+            tutors!inner (
+              user_id,
+              profiles!inner (
+                email
+              )
+            )
+          `)
+          .eq('id', bookingData.class_id)
+          .single()
+
+        if (!classError && classData?.tutors?.profiles?.email) {
+          const tutorEmail = classData.tutors.profiles.email
+          if (tutorEmail.toLowerCase() === userEmail.toLowerCase()) {
+            console.log('✅ Tutor access granted for:', userEmail)
+            return true
+          }
+        }
+      }
+
+      console.log('❌ Access denied for:', userEmail)
+      console.log('❌ Student email in booking:', studentEmail)
+      console.log('❌ Classroom data:', classroom)
+      return false
     } catch (error) {
       console.error('Error validating room access:', error)
       return false

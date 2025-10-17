@@ -22,13 +22,17 @@ class WhiteboardService {
   /**
    * Save whiteboard session data
    */
-  async saveWhiteboardSession(roomId: string, data: WhiteboardData): Promise<WhiteboardSession> {
+  async saveWhiteboardSession(roomId: string, data: WhiteboardData, userId?: string): Promise<WhiteboardSession> {
     try {
       const supabase = createClient()
+      
+      // Create a user-specific room ID to prevent cross-user data sharing
+      const userSpecificRoomId = userId ? `${roomId}-${userId}` : roomId
+      
       const { data: session, error } = await supabase
         .from('whiteboard_sessions')
         .upsert({
-          room_id: roomId,
+          room_id: userSpecificRoomId,
           session_data: data,
           updated_at: new Date().toISOString()
         })
@@ -50,13 +54,17 @@ class WhiteboardService {
   /**
    * Load whiteboard session data
    */
-  async loadWhiteboardSession(roomId: string): Promise<WhiteboardSession | null> {
+  async loadWhiteboardSession(roomId: string, userId?: string): Promise<WhiteboardSession | null> {
     try {
       const supabase = createClient()
+      
+      // Create a user-specific room ID to prevent cross-user data sharing
+      const userSpecificRoomId = userId ? `${roomId}-${userId}` : roomId
+      
       const { data: session, error } = await supabase
         .from('whiteboard_sessions')
         .select('*')
-        .eq('room_id', roomId)
+        .eq('room_id', userSpecificRoomId)
         .single()
 
       if (error) {

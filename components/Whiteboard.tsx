@@ -8,11 +8,12 @@ import { whiteboardService } from '@/services/whiteboardService'
 interface WhiteboardProps {
   roomId: string
   isTutor: boolean
+  userId?: string
   onSave?: (data: any) => void
   className?: string
 }
 
-export function Whiteboard({ roomId, isTutor, onSave, className = '' }: WhiteboardProps) {
+export function Whiteboard({ roomId, isTutor, userId, onSave, className = '' }: WhiteboardProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [whiteboardUrl, setWhiteboardUrl] = useState('')
@@ -43,7 +44,7 @@ export function Whiteboard({ roomId, isTutor, onSave, className = '' }: Whiteboa
         excalidrawUrl: whiteboardUrl
       }
       
-      await whiteboardService.saveWhiteboardSession(roomId, sessionData)
+      await whiteboardService.saveWhiteboardSession(roomId, sessionData, userId)
       toast.success('Whiteboard session saved!')
       
       if (onSave) {
