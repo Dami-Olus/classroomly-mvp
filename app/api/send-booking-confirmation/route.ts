@@ -55,6 +55,14 @@ export async function POST(request: NextRequest) {
 
     console.log('📧 Student email result:', studentEmailResult)
 
+    // Check if student email failed
+    if (studentEmailResult.error) {
+      console.error('📧 Student email failed:', studentEmailResult.error)
+      if (studentEmailResult.error.message?.includes('testing emails')) {
+        console.error('📧 Resend domain not verified. Please verify domain at resend.com/domains')
+      }
+    }
+
     // Send notification email to tutor
     const tutorEmailHtml = generateTutorBookingNotificationEmail({
       tutorName,
@@ -74,6 +82,14 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('📧 Tutor email result:', tutorEmailResult)
+
+    // Check if tutor email failed
+    if (tutorEmailResult.error) {
+      console.error('📧 Tutor email failed:', tutorEmailResult.error)
+      if (tutorEmailResult.error.message?.includes('testing emails')) {
+        console.error('📧 Resend domain not verified. Please verify domain at resend.com/domains')
+      }
+    }
 
     return NextResponse.json({
       success: true,
