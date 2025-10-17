@@ -125,6 +125,10 @@ export default function ClassroomPage() {
     }
   }
 
+  const handleHideWhiteboard = () => {
+    setShowWhiteboard(false)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -291,7 +295,7 @@ export default function ClassroomPage() {
               <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
                 <h3 className="font-semibold text-gray-900">Collaborative Whiteboard</h3>
                 <button
-                  onClick={() => setShowWhiteboard(false)}
+                  onClick={handleHideWhiteboard}
                   className="btn-secondary text-sm flex items-center gap-1"
                 >
                   <X className="w-4 h-4" />
