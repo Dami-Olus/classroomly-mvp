@@ -18,30 +18,78 @@ function AuthCallbackContent() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession()
-        
+        // Get the URL hash parameters that Supabase sends
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const accessToken = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
+        const error = hashParams.get('error')
+        const errorDescription = hashParams.get('error_description')
+
+        console.log('Auth callback params:', { accessToken, refreshToken, error, errorDescription })
+
         if (error) {
-          console.error('Auth callback error:', error)
+          console.error('Auth callback error:', error, errorDescription)
           setStatus('error')
-          setMessage('Failed to confirm your email. Please try again.')
+          setMessage(`Failed to confirm your email: ${errorDescription || error}`)
           return
         }
 
-        if (data.session?.user) {
-          setStatus('success')
-          setMessage('Email confirmed successfully! Redirecting to your dashboard...')
-          
-          // Wait a moment then redirect based on user role
-          setTimeout(() => {
-            if (profile?.role === 'tutor') {
-              router.push('/tutor/dashboard')
-            } else {
-              router.push('/student/dashboard')
-            }
-          }, 2000)
+        if (accessToken && refreshToken) {
+          // Set the session with the tokens from the URL
+          const { data, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+
+          if (sessionError) {
+            console.error('Session error:', sessionError)
+            setStatus('error')
+            setMessage('Failed to establish session. Please try again.')
+            return
+          }
+
+          if (data.session?.user) {
+            setStatus('success')
+            setMessage('Email confirmed successfully! Redirecting to your dashboard...')
+            
+            // Wait a moment then redirect based on user role
+            setTimeout(() => {
+              if (profile?.role === 'tutor') {
+                router.push('/tutor/dashboard')
+              } else {
+                router.push('/student/dashboard')
+              }
+            }, 2000)
+          } else {
+            setStatus('error')
+            setMessage('No active session found. Please try signing in again.')
+          }
         } else {
-          setStatus('error')
-          setMessage('No active session found. Please try signing in again.')
+          // No tokens in URL, check if user is already authenticated
+          const { data, error: sessionError } = await supabase.auth.getSession()
+          
+          if (sessionError) {
+            console.error('Session error:', sessionError)
+            setStatus('error')
+            setMessage('Failed to confirm your email. Please try again.')
+            return
+          }
+
+          if (data.session?.user) {
+            setStatus('success')
+            setMessage('Email confirmed successfully! Redirecting to your dashboard...')
+            
+            setTimeout(() => {
+              if (profile?.role === 'tutor') {
+                router.push('/tutor/dashboard')
+              } else {
+                router.push('/student/dashboard')
+              }
+            }, 2000)
+          } else {
+            setStatus('error')
+            setMessage('No active session found. Please try signing in again.')
+          }
         }
       } catch (error) {
         console.error('Callback error:', error)
