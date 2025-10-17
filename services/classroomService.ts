@@ -32,17 +32,39 @@ export class ClassroomService {
     try {
       console.log('🔍 Loading classroom for room URL:', roomUrl)
       
-      // First, get the classroom data
-      const { data: classroomData, error: classroomError } = await this.supabase
+      // First, try to find by room_url
+      const { data: classroomByUrl, error: urlError } = await this.supabase
         .from('classrooms')
         .select('*')
         .eq('room_url', roomUrl)
         .single()
 
+      let classroomData = classroomByUrl
+      let classroomError = urlError
+
+      // If not found by room_url, try by ID (in case roomUrl is actually a classroom ID)
+      if (urlError && urlError.code === 'PGRST116') {
+        console.log('🔍 No classroom found by room_url, trying by ID...')
+        const { data: classroomById, error: idError } = await this.supabase
+          .from('classrooms')
+          .select('*')
+          .eq('id', roomUrl)
+          .single()
+
+        if (!idError && classroomById) {
+          console.log('✅ Found classroom by ID:', classroomById.id)
+          classroomData = classroomById
+          classroomError = null
+        } else {
+          // Keep the original error if ID lookup also fails
+          classroomError = idError
+        }
+      }
+
       if (classroomError) {
         console.error('❌ Error loading classroom:', classroomError)
         if (classroomError.code === 'PGRST116') {
-          console.log('❌ No classroom found with room URL:', roomUrl)
+          console.log('❌ No classroom found with room URL or ID:', roomUrl)
           // Let's check if there are any classrooms at all
           const { data: allClassrooms } = await this.supabase
             .from('classrooms')
@@ -279,6 +301,18 @@ export class ClassroomService {
     try {
       console.log('🏗️ Creating classroom on-demand for room URL:', roomUrl)
       
+      // First, check if this roomUrl is actually a classroom ID
+      const { data: existingClassroom, error: existingClassroomError } = await this.supabase
+        .from('classrooms')
+        .select('*')
+        .eq('id', roomUrl)
+        .single()
+
+      if (!existingClassroomError && existingClassroom) {
+        console.log('✅ Found existing classroom by ID:', existingClassroom.id)
+        return await this.loadClassroom(existingClassroom.room_url)
+      }
+
       // Try to find a session that matches this room URL
       const { data: sessions, error: sessionsError } = await this.supabase
         .from('sessions')
