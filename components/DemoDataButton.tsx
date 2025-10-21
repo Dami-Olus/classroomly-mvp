@@ -16,6 +16,7 @@ export default function DemoDataButton({ role, onComplete }: DemoDataButtonProps
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [completed, setCompleted] = useState(false)
+  const [showRemoveOption, setShowRemoveOption] = useState(false)
 
   const setupTutorDemoData = async () => {
     if (!profile) return
@@ -196,6 +197,117 @@ export default function DemoDataButton({ role, onComplete }: DemoDataButtonProps
     }
   }
 
+  const removeDemoData = async () => {
+    if (!profile) return
+
+    try {
+      setLoading(true)
+
+      // Get tutor profile
+      const { data: tutorData } = await supabase
+        .from('tutors')
+        .select('id')
+        .eq('user_id', profile.id)
+        .single()
+
+      if (!tutorData) {
+        toast.error('Tutor profile not found')
+        return
+      }
+
+      // Find demo classes (those with booking_link starting with 'demo-math-')
+      const { data: demoClasses, error: classesError } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('tutor_id', tutorData.id)
+        .like('booking_link', 'demo-math-%')
+
+      if (classesError) {
+        console.error('Error finding demo classes:', classesError)
+        throw new Error(`Failed to find demo classes: ${classesError.message}`)
+      }
+
+      if (!demoClasses || demoClasses.length === 0) {
+        toast('No demo data found to remove', {
+          icon: 'ℹ️',
+          duration: 4000,
+        })
+        return
+      }
+
+      const classIds = demoClasses.map(c => c.id)
+
+      // Delete demo bookings
+      const { error: bookingsError } = await supabase
+        .from('bookings')
+        .delete()
+        .in('class_id', classIds)
+
+      if (bookingsError) {
+        console.error('Error deleting demo bookings:', bookingsError)
+        // Continue with other deletions even if this fails
+      }
+
+      // Delete demo sessions
+      const { error: sessionsError } = await supabase
+        .from('sessions')
+        .delete()
+        .in('booking_id', 
+          await supabase
+            .from('bookings')
+            .select('id')
+            .in('class_id', classIds)
+            .then(({ data }) => data?.map(b => b.id) || [])
+        )
+
+      if (sessionsError) {
+        console.error('Error deleting demo sessions:', sessionsError)
+        // Continue with other deletions even if this fails
+      }
+
+      // Delete demo classrooms
+      const { error: classroomsError } = await supabase
+        .from('classrooms')
+        .delete()
+        .in('booking_id', 
+          await supabase
+            .from('bookings')
+            .select('id')
+            .in('class_id', classIds)
+            .then(({ data }) => data?.map(b => b.id) || [])
+        )
+
+      if (classroomsError) {
+        console.error('Error deleting demo classrooms:', classroomsError)
+        // Continue with other deletions even if this fails
+      }
+
+      // Delete demo classes
+      const { error: classesDeleteError } = await supabase
+        .from('classes')
+        .delete()
+        .in('id', classIds)
+
+      if (classesDeleteError) {
+        console.error('Error deleting demo classes:', classesDeleteError)
+        throw new Error(`Failed to delete demo classes: ${classesDeleteError.message}`)
+      }
+
+      toast.success('Demo data removed successfully!')
+      setCompleted(false)
+      setShowRemoveOption(false)
+      
+      if (onComplete) {
+        setTimeout(onComplete, 2000)
+      }
+    } catch (error: any) {
+      console.error('Error removing demo data:', error)
+      toast.error(error.message || 'Failed to remove demo data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSetup = () => {
     if (role === 'tutor') {
       setupTutorDemoData()
@@ -228,6 +340,45 @@ export default function DemoDataButton({ role, onComplete }: DemoDataButtonProps
         <div className="flex items-center space-x-2 text-sm text-green-700 mt-1">
           <CheckCircle className="w-4 h-4" />
           <span>Demo sessions scheduled</span>
+        </div>
+        
+        <div className="mt-4 pt-4 border-t border-green-200">
+          <button
+            onClick={() => setShowRemoveOption(!showRemoveOption)}
+            className="text-sm text-green-700 hover:text-green-800 underline"
+          >
+            {showRemoveOption ? 'Hide' : 'Remove Demo Data'}
+          </button>
+          
+          {showRemoveOption && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800 mb-3">
+                This will permanently delete all demo data including classes, bookings, and sessions.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={removeDemoData}
+                  disabled={loading}
+                  className="btn-secondary text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Removing...
+                    </>
+                  ) : (
+                    'Yes, Remove Demo Data'
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowRemoveOption(false)}
+                  className="btn-secondary text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )

@@ -20,6 +20,7 @@ export default function TutorDashboard() {
   const [uniqueStudents, setUniqueStudents] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [showDemoData, setShowDemoData] = useState(false)
+  const [hasDemoData, setHasDemoData] = useState(false)
 
   useEffect(() => {
     if (profile) {
@@ -41,7 +42,7 @@ export default function TutorDashboard() {
       // Load active classes
       const { data: classes } = await supabase
         .from('classes')
-        .select('id, title, is_active')
+        .select('id, title, is_active, booking_link')
         .eq('tutor_id', tutorData.id)
         .eq('is_active', true)
 
@@ -87,7 +88,9 @@ export default function TutorDashboard() {
       setActiveClassrooms(tutorClassrooms)
       setUniqueStudents(studentIds)
       
-      // Show demo data option if tutor has no classes yet
+      // Check for demo data and show appropriate options
+      const hasDemoClasses = (classes || []).some(c => c.booking_link?.startsWith('demo-math-'))
+      setHasDemoData(hasDemoClasses)
       setShowDemoData((classes || []).length === 0)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
@@ -230,6 +233,31 @@ export default function TutorDashboard() {
                 role="tutor" 
                 onComplete={() => setShowDemoData(false)}
               />
+            </div>
+          )}
+
+          {/* Demo Data Removal Option */}
+          {hasDemoData && (
+            <div className="mb-8">
+              <div className="card bg-yellow-50 border-yellow-200">
+                <div className="flex items-center space-x-3 mb-4">
+                  <BookOpen className="w-6 h-6 text-yellow-600" />
+                  <h2 className="text-xl font-semibold text-yellow-900">
+                    🧹 Demo Data Detected
+                  </h2>
+                </div>
+                <p className="text-yellow-800 mb-4">
+                  We found demo data in your account. You can remove it to clean up your dashboard.
+                </p>
+                <DemoDataButton 
+                  role="tutor" 
+                  onComplete={() => {
+                    setHasDemoData(false)
+                    // Reload dashboard data to refresh the view
+                    loadDashboardData()
+                  }}
+                />
+              </div>
             </div>
           )}
 
