@@ -379,7 +379,7 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
         ))}
       </div>
 
-      {/* Demo Data Option */}
+      {/* Demo Data Option
       <div className="mt-6">
         <DemoDataSetup 
           role={role} 
@@ -388,7 +388,7 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
             if (onComplete) onComplete()
           }}
         />
-      </div>
+      </div> */}
 
       {/* Help Text */}
       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
