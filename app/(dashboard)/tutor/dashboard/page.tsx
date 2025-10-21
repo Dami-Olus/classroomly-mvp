@@ -9,7 +9,6 @@ import { BookOpen, Calendar, Users, TrendingUp, Video, ExternalLink } from 'luci
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { formatDate } from '@/lib/utils'
-import DemoDataButton from '@/components/DemoDataButton'
 
 export default function TutorDashboard() {
   const { profile } = useAuth()
@@ -19,8 +18,6 @@ export default function TutorDashboard() {
   const [activeClassrooms, setActiveClassrooms] = useState<any[]>([])
   const [uniqueStudents, setUniqueStudents] = useState(new Set())
   const [loading, setLoading] = useState(true)
-  const [showDemoData, setShowDemoData] = useState(false)
-  const [hasDemoData, setHasDemoData] = useState(false)
 
   useEffect(() => {
     if (profile) {
@@ -42,7 +39,7 @@ export default function TutorDashboard() {
       // Load active classes
       const { data: classes } = await supabase
         .from('classes')
-        .select('id, title, is_active, booking_link')
+        .select('id, title, is_active')
         .eq('tutor_id', tutorData.id)
         .eq('is_active', true)
 
@@ -87,11 +84,6 @@ export default function TutorDashboard() {
       setTotalBookings(bookings || [])
       setActiveClassrooms(tutorClassrooms)
       setUniqueStudents(studentIds)
-      
-      // Check for demo data and show appropriate options
-      const hasDemoClasses = (classes || []).some(c => c.booking_link?.startsWith('demo-math-'))
-      setHasDemoData(hasDemoClasses)
-      setShowDemoData((classes || []).length === 0)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
       toast.error('Failed to load dashboard data')
@@ -226,42 +218,6 @@ export default function TutorDashboard() {
             </div>
           </div>
 
-          {/* Demo Data Option */}
-          {showDemoData && (
-            <div className="mb-8">
-              <DemoDataButton 
-                role="tutor" 
-                onComplete={() => setShowDemoData(false)}
-              />
-            </div>
-          )}
-
-          {/* Demo Data Removal Option */}
-          {hasDemoData && (
-            <div className="mb-8">
-              <div className="card bg-yellow-50 border-yellow-200">
-                <div className="flex items-center space-x-3 mb-4">
-                  <BookOpen className="w-6 h-6 text-yellow-600" />
-                  <h2 className="text-xl font-semibold text-yellow-900">
-                    🧹 Demo Data Detected
-                  </h2>
-                </div>
-                <p className="text-yellow-800 mb-4">
-                  We found demo data in your account. You can remove it to clean up your dashboard.
-                </p>
-                <DemoDataButton 
-                  role="tutor" 
-                  onComplete={() => {
-                    setHasDemoData(false)
-                    // Reload dashboard data to refresh the view
-                    setTimeout(() => {
-                      loadDashboardData()
-                    }, 1000)
-                  }}
-                />
-              </div>
-            </div>
-          )}
 
           {/* Getting Started */}
           <div className="card bg-primary-50 border-primary-200">
