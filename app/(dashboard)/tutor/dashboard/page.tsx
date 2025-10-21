@@ -234,7 +234,7 @@ export default function TutorDashboard() {
           )}
 
           {/* Getting Started */}
-          <div className="card bg-primary-50 border-primary-200">
+          {/* <div className="card bg-primary-50 border-primary-200">
             <h2 className="text-xl font-semibold text-primary-900 mb-4">
               🚀 Getting Started
             </h2>
@@ -260,7 +260,7 @@ export default function TutorDashboard() {
                 href="/tutor/classes"
               />
             </div>
-          </div>
+          </div> */}
         </div>
       </DashboardLayout>
     </ProtectedRoute>
