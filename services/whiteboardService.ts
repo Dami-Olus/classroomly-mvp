@@ -9,9 +9,13 @@ export interface WhiteboardSession {
 }
 
 export interface WhiteboardData {
-  elements: any[]
-  appState: any
-  files: any
+  roomId?: string
+  timestamp?: string
+  excalidrawUrl?: string
+  elements?: any[]
+  appState?: any
+  files?: any
+  [key: string]: any // Allow additional properties
 }
 
 class WhiteboardService {
