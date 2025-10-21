@@ -42,7 +42,17 @@ export async function POST(request: NextRequest) {
 
     if (classError) throw classError
 
-    // Create a test booking
+    // Create a test booking with validated scheduled_slots
+    const testScheduledSlots = [
+      { day: 'Monday', time: '10:00' },
+      { day: 'Wednesday', time: '10:00' }
+    ]
+
+    // Validate scheduled slots
+    if (!testScheduledSlots || testScheduledSlots.length === 0) {
+      throw new Error('No valid scheduled slots for test booking')
+    }
+
     const { data: bookingData, error: bookingError } = await supabase
       .from('bookings')
       .insert({
@@ -53,10 +63,7 @@ export async function POST(request: NextRequest) {
         status: 'confirmed',
         total_sessions: 4,
         completed_sessions: 0,
-        scheduled_slots: [
-          { day: 'Monday', time: '10:00' },
-          { day: 'Wednesday', time: '10:00' }
-        ],
+        scheduled_slots: testScheduledSlots,
       })
       .select()
       .single()

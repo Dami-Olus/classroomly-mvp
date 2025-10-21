@@ -295,6 +295,11 @@ export async function importSessions(
         time: row.time
       }))
 
+      // Validate scheduled slots
+      if (!scheduledSlots || scheduledSlots.length === 0) {
+        throw new Error(`No valid time slots for student ${row.studentName}. Please check the days and time format.`)
+      }
+
       // Create booking
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
