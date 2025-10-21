@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Calendar, BookOpen, Clock, Video, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDate } from '@/lib/utils'
+import OnboardingFlow from '@/components/OnboardingFlow'
 
 export default function StudentDashboard() {
   const { profile } = useAuth()
@@ -20,6 +21,7 @@ export default function StudentDashboard() {
     upcomingSessions: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     if (profile) {
@@ -199,6 +201,9 @@ export default function StudentDashboard() {
         completedSessions,
         upcomingSessions,
       })
+      
+      // Show onboarding if student has no bookings yet
+      setShowOnboarding((bookings || []).length === 0)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
       // Show more specific error message
@@ -356,20 +361,32 @@ export default function StudentDashboard() {
             )}
           </div>
 
-          {/* Getting Started */}
-          <div className="card bg-primary-50 border-primary-200">
-            <h2 className="text-xl font-semibold text-primary-900 mb-4">
-              🎯 Get Started
-            </h2>
-            <p className="text-primary-800 mb-4">
-              Receive a booking link from your tutor to schedule your first
-              session!
-            </p>
-            <p className="text-sm text-primary-700">
-              When a tutor shares their class link with you, you can book
-              sessions instantly without any complex setup.
-            </p>
-          </div>
+          {/* Onboarding Flow */}
+          {showOnboarding && (
+            <div className="mb-8">
+              <OnboardingFlow 
+                role="student" 
+                onComplete={() => setShowOnboarding(false)}
+              />
+            </div>
+          )}
+
+          {/* Getting Started - Only show if onboarding is complete */}
+          {!showOnboarding && (
+            <div className="card bg-primary-50 border-primary-200">
+              <h2 className="text-xl font-semibold text-primary-900 mb-4">
+                🎯 Get Started
+              </h2>
+              <p className="text-primary-800 mb-4">
+                Receive a booking link from your tutor to schedule your first
+                session!
+              </p>
+              <p className="text-sm text-primary-700">
+                When a tutor shares their class link with you, you can book
+                sessions instantly without any complex setup.
+              </p>
+            </div>
+          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>

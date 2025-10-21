@@ -9,6 +9,7 @@ import { BookOpen, Calendar, Users, TrendingUp, Video, ExternalLink } from 'luci
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { formatDate } from '@/lib/utils'
+import OnboardingFlow from '@/components/OnboardingFlow'
 
 export default function TutorDashboard() {
   const { profile } = useAuth()
@@ -18,6 +19,7 @@ export default function TutorDashboard() {
   const [activeClassrooms, setActiveClassrooms] = useState<any[]>([])
   const [uniqueStudents, setUniqueStudents] = useState(new Set())
   const [loading, setLoading] = useState(true)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     if (profile) {
@@ -84,6 +86,9 @@ export default function TutorDashboard() {
       setTotalBookings(bookings || [])
       setActiveClassrooms(tutorClassrooms)
       setUniqueStudents(studentIds)
+      
+      // Show onboarding if tutor has no classes yet
+      setShowOnboarding((classes || []).length === 0)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
       toast.error('Failed to load dashboard data')
@@ -218,34 +223,46 @@ export default function TutorDashboard() {
             </div>
           </div>
 
-          {/* Getting Started */}
-          <div className="card bg-primary-50 border-primary-200">
-            <h2 className="text-xl font-semibold text-primary-900 mb-4">
-              🚀 Getting Started
-            </h2>
-            <div className="space-y-3">
-              <Step
-                number={1}
-                text="Complete your tutor profile"
-                href="/tutor/profile"
-              />
-              <Step
-                number={2}
-                text="Set your general availability"
-                href="/tutor/availability"
-              />
-              <Step
-                number={3}
-                text="Create your first class"
-                href="/tutor/classes/create"
-              />
-              <Step
-                number={4}
-                text="Share your booking link with students"
-                href="/tutor/classes"
+          {/* Onboarding Flow */}
+          {showOnboarding && (
+            <div className="mb-8">
+              <OnboardingFlow 
+                role="tutor" 
+                onComplete={() => setShowOnboarding(false)}
               />
             </div>
-          </div>
+          )}
+
+          {/* Getting Started - Only show if onboarding is complete */}
+          {!showOnboarding && (
+            <div className="card bg-primary-50 border-primary-200">
+              <h2 className="text-xl font-semibold text-primary-900 mb-4">
+                🚀 Getting Started
+              </h2>
+              <div className="space-y-3">
+                <Step
+                  number={1}
+                  text="Complete your tutor profile"
+                  href="/tutor/profile"
+                />
+                <Step
+                  number={2}
+                  text="Set your general availability"
+                  href="/tutor/availability"
+                />
+                <Step
+                  number={3}
+                  text="Create your first class"
+                  href="/tutor/classes/create"
+                />
+                <Step
+                  number={4}
+                  text="Share your booking link with students"
+                  href="/tutor/classes"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>
