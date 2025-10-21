@@ -254,7 +254,9 @@ export default function TutorDashboard() {
                   onComplete={() => {
                     setHasDemoData(false)
                     // Reload dashboard data to refresh the view
-                    loadDashboardData()
+                    setTimeout(() => {
+                      loadDashboardData()
+                    }, 1000)
                   }}
                 />
               </div>

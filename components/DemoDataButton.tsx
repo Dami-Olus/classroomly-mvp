@@ -17,6 +17,7 @@ export default function DemoDataButton({ role, onComplete }: DemoDataButtonProps
   const [loading, setLoading] = useState(false)
   const [completed, setCompleted] = useState(false)
   const [showRemoveOption, setShowRemoveOption] = useState(false)
+  const [isRemovalMode, setIsRemovalMode] = useState(false)
 
   const setupTutorDemoData = async () => {
     if (!profile) return
@@ -296,6 +297,7 @@ export default function DemoDataButton({ role, onComplete }: DemoDataButtonProps
       toast.success('Demo data removed successfully!')
       setCompleted(false)
       setShowRemoveOption(false)
+      setIsRemovalMode(false)
       
       if (onComplete) {
         setTimeout(onComplete, 2000)
@@ -316,42 +318,48 @@ export default function DemoDataButton({ role, onComplete }: DemoDataButtonProps
     }
   }
 
-  if (completed) {
+  if (completed || isRemovalMode) {
     return (
       <div className="card bg-green-50 border-green-200">
         <div className="flex items-center space-x-3 mb-4">
           <CheckCircle className="w-6 h-6 text-green-600" />
           <h2 className="text-xl font-semibold text-green-900">
-            🎉 Demo Data Created!
+            {isRemovalMode ? '🧹 Remove Demo Data' : '🎉 Demo Data Created!'}
           </h2>
         </div>
         <p className="text-green-800 mb-4">
-          Your dashboard now has sample data to help you explore the platform. 
-          You can see how classes, bookings, and sessions work.
+          {isRemovalMode 
+            ? 'Remove the demo data from your account to clean up your dashboard.'
+            : 'Your dashboard now has sample data to help you explore the platform. You can see how classes, bookings, and sessions work.'
+          }
         </p>
-        <div className="flex items-center space-x-2 text-sm text-green-700">
-          <CheckCircle className="w-4 h-4" />
-          <span>Demo class created</span>
-        </div>
-        <div className="flex items-center space-x-2 text-sm text-green-700 mt-1">
-          <CheckCircle className="w-4 h-4" />
-          <span>Sample bookings added</span>
-        </div>
-        <div className="flex items-center space-x-2 text-sm text-green-700 mt-1">
-          <CheckCircle className="w-4 h-4" />
-          <span>Demo sessions scheduled</span>
-        </div>
+        {!isRemovalMode && (
+          <>
+            <div className="flex items-center space-x-2 text-sm text-green-700">
+              <CheckCircle className="w-4 h-4" />
+              <span>Demo class created</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-green-700 mt-1">
+              <CheckCircle className="w-4 h-4" />
+              <span>Sample bookings added</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-green-700 mt-1">
+              <CheckCircle className="w-4 h-4" />
+              <span>Demo sessions scheduled</span>
+            </div>
+          </>
+        )}
         
         <div className="mt-4 pt-4 border-t border-green-200">
-          <button
-            onClick={() => setShowRemoveOption(!showRemoveOption)}
-            className="text-sm text-green-700 hover:text-green-800 underline"
-          >
-            {showRemoveOption ? 'Hide' : 'Remove Demo Data'}
-          </button>
-          
-          {showRemoveOption && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          {!isRemovalMode ? (
+            <button
+              onClick={() => setIsRemovalMode(true)}
+              className="text-sm text-green-700 hover:text-green-800 underline"
+            >
+              Remove Demo Data
+            </button>
+          ) : (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-800 mb-3">
                 This will permanently delete all demo data including classes, bookings, and sessions.
               </p>
@@ -371,7 +379,7 @@ export default function DemoDataButton({ role, onComplete }: DemoDataButtonProps
                   )}
                 </button>
                 <button
-                  onClick={() => setShowRemoveOption(false)}
+                  onClick={() => setIsRemovalMode(false)}
                   className="btn-secondary text-sm"
                 >
                   Cancel
