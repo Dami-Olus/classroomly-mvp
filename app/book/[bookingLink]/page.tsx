@@ -269,6 +269,17 @@ export default function PublicBookingPage() {
         throw new Error('Please select a start date for your sessions')
       }
 
+      // Validate selectedSlots before creating booking
+      if (!selectedSlots || selectedSlots.length === 0) {
+        throw new Error('No time slots selected. Please select at least one time slot.')
+      }
+
+      // Ensure selectedSlots is a valid array
+      const validSlots = Array.isArray(selectedSlots) ? selectedSlots : []
+      if (validSlots.length === 0) {
+        throw new Error('Invalid time slots selected. Please try again.')
+      }
+
       // Create booking with student_id and tutor_id
       const bookingData = {
         class_id: classData.id,
@@ -276,9 +287,9 @@ export default function PublicBookingPage() {
         student_id: user?.id || null,
         student_name: formData.studentName,
         student_email: formData.studentEmail,
-        scheduled_slots: selectedSlots,
+        scheduled_slots: validSlots, // Use validated slots
         total_sessions: formData.totalSessions,
-        sessions_per_week: selectedSlots.length,
+        sessions_per_week: validSlots.length,
         start_date: formData.startDate,
         notes: formData.notes,
         status: 'confirmed' as const,
