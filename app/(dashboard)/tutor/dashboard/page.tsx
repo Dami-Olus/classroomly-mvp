@@ -9,6 +9,7 @@ import { BookOpen, Calendar, Users, TrendingUp, Video, ExternalLink } from 'luci
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { formatDate } from '@/lib/utils'
+import OnboardingFlow from '@/components/OnboardingFlow'
 
 export default function TutorDashboard() {
   const { profile } = useAuth()
@@ -18,6 +19,7 @@ export default function TutorDashboard() {
   const [activeClassrooms, setActiveClassrooms] = useState<any[]>([])
   const [uniqueStudents, setUniqueStudents] = useState(new Set())
   const [loading, setLoading] = useState(true)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     if (profile) {
@@ -84,6 +86,9 @@ export default function TutorDashboard() {
       setTotalBookings(bookings || [])
       setActiveClassrooms(tutorClassrooms)
       setUniqueStudents(studentIds)
+      
+      // Show onboarding if tutor has no classes yet
+      setShowOnboarding((classes || []).length === 0)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
       toast.error('Failed to load dashboard data')
@@ -218,6 +223,15 @@ export default function TutorDashboard() {
             </div>
           </div>
 
+          {/* Onboarding Flow */}
+          {showOnboarding && (
+            <div className="mb-8">
+              <OnboardingFlow 
+                role="tutor" 
+                onComplete={() => setShowOnboarding(false)}
+              />
+            </div>
+          )}
 
           {/* Getting Started */}
           <div className="card bg-primary-50 border-primary-200">
