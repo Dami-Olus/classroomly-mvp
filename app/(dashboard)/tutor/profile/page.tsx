@@ -131,18 +131,26 @@ export default function TutorProfile() {
   }
 
   const addExpertise = (expertise: string) => {
+    console.log('Adding expertise:', expertise, 'Current expertise:', formData.expertise)
     if (expertise && !formData.expertise.includes(expertise)) {
+      const newExpertise = [...formData.expertise, expertise]
+      console.log('New expertise array:', newExpertise)
       setFormData({
         ...formData,
-        expertise: [...formData.expertise, expertise],
+        expertise: newExpertise,
       })
+    } else {
+      console.log('Expertise already exists or is empty')
     }
   }
 
   const removeExpertise = (expertise: string) => {
+    console.log('Removing expertise:', expertise, 'Current expertise:', formData.expertise)
+    const newExpertise = formData.expertise.filter((e) => e !== expertise)
+    console.log('New expertise array after removal:', newExpertise)
     setFormData({
       ...formData,
-      expertise: formData.expertise.filter((e) => e !== expertise),
+      expertise: newExpertise,
     })
   }
 
@@ -279,15 +287,30 @@ export default function TutorProfile() {
                       id="expertise"
                       className="input"
                       placeholder="e.g. Mathematics, Physics..."
-                      onKeyPress={(e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
                           const input = e.target as HTMLInputElement
-                          addExpertise(input.value)
-                          input.value = ''
+                          if (input.value.trim()) {
+                            addExpertise(input.value.trim())
+                            input.value = ''
+                          }
                         }
                       }}
                     />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById('expertise') as HTMLInputElement
+                        if (input && input.value.trim()) {
+                          addExpertise(input.value.trim())
+                          input.value = ''
+                        }
+                      }}
+                      className="btn-secondary"
+                    >
+                      Add
+                    </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {formData.expertise.map((exp) => (
