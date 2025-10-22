@@ -41,6 +41,11 @@ export default function TutorProfile() {
     }
   }, [profile])
 
+  // Debug form data changes
+  useEffect(() => {
+    console.log('Form data changed:', formData)
+  }, [formData])
+
   const loadTutorProfile = async () => {
     if (!profile) return
 
