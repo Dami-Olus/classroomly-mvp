@@ -41,6 +41,8 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
   const [loading, setLoading] = useState(true)
   const [progress, setProgress] = useState(0)
   const [showDemoData, setShowDemoData] = useState(false)
+  const [isDismissed, setIsDismissed] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
 
   useEffect(() => {
     if (profile) {
@@ -126,7 +128,7 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
       
       switch (step.id) {
         case 'profile':
-          completed = !!(tutorProfile?.bio && tutorProfile?.expertise?.length > 0)
+          completed = !!(tutorProfile?.first_name && tutorProfile?.last_name)
           break
         case 'availability':
           completed = !!(availability?.availability && Object.keys(availability.availability).length > 0)
@@ -143,7 +145,16 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
     })
 
     setSteps(updatedSteps)
-    setProgress(updatedSteps.filter(s => s.completed).length / updatedSteps.length * 100)
+    const completedCount = updatedSteps.filter(s => s.completed).length
+    const newProgress = completedCount / updatedSteps.length * 100
+    setProgress(newProgress)
+    
+    // Show confetti if all steps are completed
+    if (completedCount === updatedSteps.length && !showConfetti) {
+      setShowConfetti(true)
+      // Hide confetti after 3 seconds
+      setTimeout(() => setShowConfetti(false), 3000)
+    }
   }
 
   const loadStudentProgress = async () => {
@@ -220,7 +231,16 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
     })
 
     setSteps(updatedSteps)
-    setProgress(updatedSteps.filter(s => s.completed).length / updatedSteps.length * 100)
+    const completedCount = updatedSteps.filter(s => s.completed).length
+    const newProgress = completedCount / updatedSteps.length * 100
+    setProgress(newProgress)
+    
+    // Show confetti if all steps are completed
+    if (completedCount === updatedSteps.length && !showConfetti) {
+      setShowConfetti(true)
+      // Hide confetti after 3 seconds
+      setTimeout(() => setShowConfetti(false), 3000)
+    }
   }
 
   const handleStepClick = async (step: OnboardingStep) => {
@@ -263,43 +283,45 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
   const totalSteps = steps.length
   const isComplete = completedSteps === totalSteps
 
-  if (isComplete) {
-    return (
-      <div className="card bg-green-50 border-green-200">
-        <div className="flex items-center space-x-3 mb-4">
-          <CheckCircle className="w-6 h-6 text-green-600" />
-          <h2 className="text-xl font-semibold text-green-900">
-            🎉 Onboarding Complete!
-          </h2>
-        </div>
-        <p className="text-green-800 mb-4">
-          You're all set up! You can now start using ClassroomLY to its full potential.
-        </p>
-        {onComplete && (
-          <button
-            onClick={onComplete}
-            className="btn-primary"
-          >
-            Get Started
-          </button>
-        )}
-      </div>
-    )
+  // Don't show if dismissed
+  if (isDismissed) {
+    return null
   }
 
   return (
-    <div className="card">
+    <div className={`card ${isComplete ? 'bg-green-50 border-green-200' : ''}`}>
+      {/* Confetti Animation */}
+      {showConfetti && (
+        <div className="fixed inset-0 pointer-events-none z-50">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-6xl animate-bounce">🎉</div>
+          </div>
+          <div className="absolute top-1/4 left-1/4 text-4xl animate-pulse">✨</div>
+          <div className="absolute top-1/3 right-1/4 text-3xl animate-pulse">🌟</div>
+          <div className="absolute bottom-1/3 left-1/3 text-4xl animate-bounce">🎊</div>
+          <div className="absolute bottom-1/4 right-1/3 text-3xl animate-pulse">✨</div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            {role === 'tutor' ? '🚀 Get Started as a Tutor' : '🎯 Get Started as a Student'}
+          <h2 className={`text-xl font-semibold ${isComplete ? 'text-green-900' : 'text-gray-900'}`}>
+            {isComplete 
+              ? '🎉 Onboarding Complete!' 
+              : role === 'tutor' 
+                ? '🚀 Get Started as a Tutor' 
+                : '🎯 Get Started as a Student'
+            }
           </h2>
-          <p className="text-gray-600 mt-1">
-            Complete these steps to set up your account
+          <p className={`mt-1 ${isComplete ? 'text-green-800' : 'text-gray-600'}`}>
+            {isComplete 
+              ? 'You\'re all set up! You can now start using ClassroomLY to its full potential.'
+              : 'Complete these steps to set up your account'
+            }
           </p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-primary-600">
+          <div className={`text-2xl font-bold ${isComplete ? 'text-green-600' : 'text-primary-600'}`}>
             {completedSteps}/{totalSteps}
           </div>
           <div className="text-sm text-gray-500">steps completed</div>
@@ -314,7 +336,9 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
-            className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+            className={`h-2 rounded-full transition-all duration-300 ${
+              isComplete ? 'bg-green-600' : 'bg-primary-600'
+            }`}
             style={{ width: `${progress}%` }}
           ></div>
         </div>
@@ -405,6 +429,18 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
           </div>
         </div>
       </div>
+
+      {/* Dismiss Button */}
+      {isComplete && (
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={() => setIsDismissed(true)}
+            className="btn-secondary text-sm"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -5,7 +5,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { useAuth } from '@/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
-import { BookOpen, Calendar, Users, TrendingUp, Video, ExternalLink, Clock, Settings, Share2, BarChart3, MessageSquare, Star, ArrowRight } from 'lucide-react'
+import { BookOpen, Calendar, Users, TrendingUp, Video, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { formatDate } from '@/lib/utils'
@@ -99,96 +99,6 @@ export default function TutorDashboard() {
 
   const joinClassroom = (roomUrl: string) => {
     window.open(`/classroom/${roomUrl}`, '_blank')
-  }
-
-  const getSuggestedActions = () => {
-    const suggestions: Array<{
-      title: string
-      description: string
-      href: string
-      icon: React.ReactNode
-      priority: 'high' | 'medium' | 'low'
-      completed: boolean
-    }> = []
-
-    // Check if tutor has no classes
-    if (activeClasses.length === 0) {
-      suggestions.push({
-        title: 'Create Your First Class',
-        description: 'Set up a class that students can book and start earning',
-        href: '/tutor/classes/create',
-        icon: <BookOpen className="w-5 h-5" />,
-        priority: 'high',
-        completed: false
-      })
-    }
-
-    // Check if tutor has classes but no bookings
-    if (activeClasses.length > 0 && totalBookings.length === 0) {
-      suggestions.push({
-        title: 'Share Your Booking Link',
-        description: 'Get your unique booking link to share with potential students',
-        href: '/tutor/classes',
-        icon: <Share2 className="w-5 h-5" />,
-        priority: 'high',
-        completed: false
-      })
-    }
-
-    // Check if tutor has bookings but no active classrooms
-    if (totalBookings.length > 0 && activeClassrooms.length === 0) {
-      suggestions.push({
-        title: 'Start Your First Session',
-        description: 'Begin teaching with your scheduled students',
-        href: '/tutor/bookings',
-        icon: <Video className="w-5 h-5" />,
-        priority: 'medium',
-        completed: false
-      })
-    }
-
-    // Check if tutor has completed sessions
-    const completedSessions = totalBookings.filter(b => b.status === 'completed').length
-    if (completedSessions > 0) {
-      suggestions.push({
-        title: 'Review Session Notes',
-        description: 'Check and update notes from your completed sessions',
-        href: '/tutor/bookings',
-        icon: <MessageSquare className="w-5 h-5" />,
-        priority: 'low',
-        completed: false
-      })
-    }
-
-    // Check if tutor has multiple classes
-    if (activeClasses.length > 1) {
-      suggestions.push({
-        title: 'Optimize Your Schedule',
-        description: 'Review and adjust your availability for better time management',
-        href: '/tutor/availability',
-        icon: <Clock className="w-5 h-5" />,
-        priority: 'low',
-        completed: false
-      })
-    }
-
-    // Always suggest profile completion if incomplete
-    if (!profile?.first_name || !profile?.last_name) {
-      suggestions.push({
-        title: 'Complete Your Profile',
-        description: 'Add your name and basic information to get started',
-        href: '/tutor/profile',
-        icon: <Users className="w-5 h-5" />,
-        priority: 'medium',
-        completed: false
-      })
-    }
-
-    // Sort by priority (high, medium, low) and return top 3
-    const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
-    return suggestions
-      .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
-      .slice(0, 3)
   }
 
   return (
@@ -313,24 +223,6 @@ export default function TutorDashboard() {
             </div>
           </div>
 
-          {/* Suggested Actions */}
-          <div className="card mb-8">
-            <h2 className="text-xl font-semibold mb-4">💡 Suggested Actions</h2>
-            <div className="space-y-4">
-              {getSuggestedActions().map((action, index) => (
-                <SuggestedAction
-                  key={index}
-                  title={action.title}
-                  description={action.description}
-                  href={action.href}
-                  icon={action.icon}
-                  priority={action.priority}
-                  completed={action.completed}
-                />
-              ))}
-            </div>
-          </div>
-
           {/* Onboarding Flow */}
           {showOnboarding && (
             <div className="mb-8">
@@ -418,68 +310,6 @@ function Step({
       >
         {text}
       </Link>
-    </div>
-  )
-}
-
-function SuggestedAction({
-  title,
-  description,
-  href,
-  icon,
-  priority,
-  completed,
-}: {
-  title: string
-  description: string
-  href: string
-  icon: React.ReactNode
-  priority: 'high' | 'medium' | 'low'
-  completed: boolean
-}) {
-  const priorityColors: Record<string, string> = {
-    high: 'border-red-200 bg-red-50',
-    medium: 'border-yellow-200 bg-yellow-50',
-    low: 'border-blue-200 bg-blue-50'
-  }
-
-  const priorityLabels: Record<string, string> = {
-    high: 'High Priority',
-    medium: 'Medium Priority',
-    low: 'Low Priority'
-  }
-
-  return (
-    <div className={`p-4 rounded-lg border ${priorityColors[priority]} transition-all hover:shadow-md`}>
-      <div className="flex items-start space-x-3">
-        <div className="flex-shrink-0">
-          {icon}
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-gray-900">{title}</h3>
-            <span className={`text-xs px-2 py-1 rounded-full ${
-              priority === 'high' ? 'bg-red-100 text-red-600' :
-              priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
-              'bg-blue-100 text-blue-600'
-            }`}>
-              {priorityLabels[priority]}
-            </span>
-          </div>
-          <p className="text-sm text-gray-600 mb-3">{description}</p>
-          <Link
-            href={href}
-            className={`inline-flex items-center text-sm font-medium ${
-              priority === 'high' ? 'text-red-600 hover:text-red-700' :
-              priority === 'medium' ? 'text-yellow-600 hover:text-yellow-700' :
-              'text-blue-600 hover:text-blue-700'
-            }`}
-          >
-            Get Started
-            <ArrowRight className="w-4 h-4 ml-1" />
-          </Link>
-        </div>
-      </div>
     </div>
   )
 }
