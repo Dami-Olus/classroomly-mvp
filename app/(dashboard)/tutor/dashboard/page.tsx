@@ -141,12 +141,40 @@ export default function TutorDashboard() {
 
     // Check if tutor has bookings but no active classrooms
     if (totalBookings.length > 0 && activeClassrooms.length === 0) {
+      // Find the next upcoming session
+      const upcomingSessions = totalBookings
+        .filter(b => b.status === 'confirmed' || b.status === 'scheduled')
+        .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+      
+      const nextSession = upcomingSessions[0]
+      const sessionDate = nextSession ? new Date(nextSession.start_date).toLocaleDateString() : 'soon'
+      
       suggestions.push({
         title: 'Start Your First Session',
-        description: 'Begin teaching with your scheduled students',
+        description: `Your first session is scheduled for ${sessionDate}. Prepare materials and get ready to teach!`,
         href: '/tutor/bookings',
         icon: <Video className="w-5 h-5" />,
         priority: 'medium',
+        completed: false
+      })
+    }
+
+    // Check if tutor has upcoming sessions and suggest adding materials
+    const upcomingSessions = totalBookings.filter(b => 
+      b.status === 'confirmed' || b.status === 'scheduled'
+    )
+    if (upcomingSessions.length > 0) {
+      // Get the next session date for context
+      const nextSession = upcomingSessions
+        .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())[0]
+      const sessionDate = nextSession ? new Date(nextSession.start_date).toLocaleDateString() : 'soon'
+      
+      suggestions.push({
+        title: 'Prepare for Your Session',
+        description: `Your next session is on ${sessionDate}. Add materials, review student info, and prepare your lesson plan.`,
+        href: '/tutor/classes',
+        icon: <BookOpen className="w-5 h-5" />,
+        priority: 'high',
         completed: false
       })
     }
