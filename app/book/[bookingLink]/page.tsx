@@ -51,6 +51,7 @@ export default function PublicBookingPage() {
   const [loading, setLoading] = useState(true)
   const [booking, setBooking] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [tutorTimezone, setTutorTimezone] = useState<string>('UTC')
 
   const [formData, setFormData] = useState({
@@ -265,6 +266,12 @@ export default function PublicBookingPage() {
     }
 
     if (!classData) return
+
+    // Check if user is authenticated
+    if (!user) {
+      setShowAuthPrompt(true)
+      return
+    }
 
     setBooking(true)
 
