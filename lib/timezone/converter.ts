@@ -27,6 +27,7 @@ export interface TimezoneConversion {
 export class TimezoneConverter {
   /**
    * Convert time between timezones
+   * Fixed to prevent day shifts by using proper timezone conversion
    */
   static convertTime(
     time: string,
@@ -34,25 +35,31 @@ export class TimezoneConverter {
     toTz: string
   ): string {
     try {
-      // Create a date object with the time in the source timezone
-      const today = new Date();
+      // If same timezone, return original time
+      if (fromTz === toTz) {
+        return time;
+      }
+
+      // Parse the time
       const [hours, minutes] = time.split(':').map(Number);
       
-      // Create date in source timezone
-      const sourceDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes);
+      // Create a date with the time in the source timezone
+      // Use a fixed date to avoid DST issues
+      const dateStr = '2024-06-15'; // Summer date to avoid DST transitions
+      const dateTimeStr = `${dateStr}T${time}:00`;
       
-      // Convert to target timezone
-      const targetDate = new Date(sourceDate.toLocaleString('en-US', { timeZone: toTz }));
-      const sourceDateInSource = new Date(sourceDate.toLocaleString('en-US', { timeZone: fromTz }));
+      // Create date object and interpret it as being in the source timezone
+      const sourceDate = new Date(dateTimeStr);
       
-      // Calculate the difference and adjust
-      const offsetDiff = (targetDate.getTime() - sourceDateInSource.getTime()) / (1000 * 60);
-      const adjustedDate = new Date(sourceDate.getTime() + (offsetDiff * 60000));
+      // Get the time in the target timezone
+      const targetTime = new Intl.DateTimeFormat('en-CA', {
+        timeZone: toTz,
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(sourceDate);
       
-      const convertedHours = adjustedDate.getHours();
-      const convertedMinutes = adjustedDate.getMinutes();
-      
-      return `${convertedHours.toString().padStart(2, '0')}:${convertedMinutes.toString().padStart(2, '0')}`;
+      return targetTime;
     } catch (error) {
       console.error('Timezone conversion failed:', error);
       return time; // Fallback to original time

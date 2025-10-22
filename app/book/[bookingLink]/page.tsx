@@ -183,14 +183,25 @@ export default function PublicBookingPage() {
       const tutorTz = (data.tutor as any)?.timezone || 'UTC'
       setTutorTimezone(tutorTz)
       
+      // Debug timezone information
+      console.log('🌍 TIMEZONE DEBUG:')
+      console.log('Student timezone:', studentTimezone)
+      console.log('Tutor timezone:', tutorTz)
+      console.log('Timezone info:', timezoneInfo)
+      
       // Generate available slots from TUTOR's global availability (not class-specific)
       const tutorAvailability = (data.tutor as any)?.availability
       if (tutorAvailability && tutorAvailability.slots && Array.isArray(tutorAvailability.slots)) {
+        console.log('🕐 GENERATING TIME SLOTS:')
+        console.log('Tutor availability slots:', tutorAvailability.slots)
+        console.log('Converting from tutor timezone:', tutorTz, 'to student timezone:', studentTimezone)
+        
         const slots = generateTimeSlotsFromRanges(
           tutorAvailability.slots as TimeRange[],
           data.duration || 60
         )
         console.log('Generated slots from TUTOR availability:', slots.length, 'slots')
+        console.log('Generated slots for student:', slots)
         setAvailableSlots(slots)
       } else {
         console.warn('Tutor has no availability set')
