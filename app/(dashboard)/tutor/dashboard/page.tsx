@@ -20,6 +20,7 @@ export default function TutorDashboard() {
   const [uniqueStudents, setUniqueStudents] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
 
   useEffect(() => {
     if (profile) {
@@ -87,8 +88,11 @@ export default function TutorDashboard() {
       setActiveClassrooms(tutorClassrooms)
       setUniqueStudents(studentIds)
       
-      // Show onboarding if tutor has no classes yet
-      setShowOnboarding((classes || []).length === 0)
+      // Show onboarding for new tutors who haven't dismissed it
+      // Check localStorage for dismissal status
+      const hasDismissedOnboarding = localStorage.getItem('onboarding-dismissed') === 'true'
+      setOnboardingDismissed(hasDismissedOnboarding)
+      setShowOnboarding(!hasDismissedOnboarding)
     } catch (error) {
       console.error('Error loading dashboard data:', error)
       toast.error('Failed to load dashboard data')
@@ -228,7 +232,16 @@ export default function TutorDashboard() {
             <div className="mb-8">
               <OnboardingFlow 
                 role="tutor" 
-                onComplete={() => setShowOnboarding(false)}
+                onComplete={() => {
+                  // Don't automatically hide - let user dismiss manually
+                  console.log('Onboarding completed, but keeping tracker visible')
+                }}
+                onDismiss={() => {
+                  // Mark onboarding as dismissed in localStorage
+                  localStorage.setItem('onboarding-dismissed', 'true')
+                  setShowOnboarding(false)
+                  setOnboardingDismissed(true)
+                }}
               />
             </div>
           )}

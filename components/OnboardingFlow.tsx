@@ -32,9 +32,10 @@ interface OnboardingStep {
 interface OnboardingFlowProps {
   role: 'tutor' | 'student'
   onComplete?: () => void
+  onDismiss?: () => void
 }
 
-export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps) {
+export default function OnboardingFlow({ role, onComplete, onDismiss }: OnboardingFlowProps) {
   const { profile } = useAuth()
   const supabase = createClient()
   const [steps, setSteps] = useState<OnboardingStep[]>([])
@@ -434,7 +435,12 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
       {isComplete && (
         <div className="mt-6 flex justify-end">
           <button
-            onClick={() => setIsDismissed(true)}
+            onClick={() => {
+              setIsDismissed(true)
+              if (onDismiss) {
+                onDismiss()
+              }
+            }}
             className="btn-secondary text-sm"
           >
             Dismiss
