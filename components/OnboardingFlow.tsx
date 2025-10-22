@@ -128,7 +128,7 @@ export default function OnboardingFlow({ role, onComplete }: OnboardingFlowProps
       
       switch (step.id) {
         case 'profile':
-          completed = !!(tutorProfile?.first_name && tutorProfile?.last_name)
+          completed = !!(tutorProfile?.bio && tutorProfile?.expertise?.length > 0)
           break
         case 'availability':
           completed = !!(availability?.availability && Object.keys(availability.availability).length > 0)

@@ -44,6 +44,8 @@ export default function TutorProfile() {
   const loadTutorProfile = async () => {
     if (!profile) return
 
+    console.log('Loading tutor profile for user:', profile.id)
+
     const { data, error } = await supabase
       .from('tutors')
       .select('*')
@@ -51,6 +53,7 @@ export default function TutorProfile() {
       .single()
 
     if (data) {
+      console.log('Loaded tutor profile:', data)
       setTutorProfile(data)
       setFormData((prev) => ({
         ...prev,
@@ -61,6 +64,7 @@ export default function TutorProfile() {
         hourly_rate: data.hourly_rate?.toString() || '',
       }))
     } else if (error && error.code === 'PGRST116') {
+      console.log('No tutor profile found, creating new one')
       // Create tutor profile if it doesn't exist
       const { data: newTutor } = await supabase
         .from('tutors')
@@ -69,8 +73,11 @@ export default function TutorProfile() {
         .single()
 
       if (newTutor) {
+        console.log('Created new tutor profile:', newTutor)
         setTutorProfile(newTutor)
       }
+    } else if (error) {
+      console.error('Error loading tutor profile:', error)
     }
   }
 
@@ -79,6 +86,8 @@ export default function TutorProfile() {
     setLoading(true)
 
     try {
+      console.log('Updating profile with data:', formData)
+      
       // Update profile
       await updateProfile({
         first_name: formData.first_name,
@@ -88,7 +97,9 @@ export default function TutorProfile() {
 
       // Update tutor profile
       if (profile) {
-        const { error } = await supabase
+        console.log('Updating tutor profile with expertise:', formData.expertise)
+        
+        const { data, error } = await supabase
           .from('tutors')
           .update({
             bio: formData.bio,
@@ -98,11 +109,21 @@ export default function TutorProfile() {
             hourly_rate: formData.hourly_rate ? parseFloat(formData.hourly_rate) : null,
           })
           .eq('user_id', profile.id)
+          .select()
 
-        if (error) throw error
+        if (error) {
+          console.error('Error updating tutor profile:', error)
+          throw error
+        }
+        
+        console.log('Tutor profile updated successfully:', data)
         toast.success('Profile updated successfully!')
+        
+        // Reload the profile to ensure UI is updated
+        await loadTutorProfile()
       }
     } catch (error: any) {
+      console.error('Profile update error:', error)
       toast.error(error.message || 'Failed to update profile')
     } finally {
       setLoading(false)
