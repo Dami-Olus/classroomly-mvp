@@ -531,8 +531,8 @@ export default function PublicBookingPage() {
               </div>
             </div>
 
-            <Link href="/" className="btn-primary">
-              Back to Homepage
+            <Link href="/student/bookings" className="btn-primary">
+              View My Bookings
             </Link>
           </div>
         </div>
