@@ -33,6 +33,9 @@ export async function POST(request: NextRequest) {
     console.log('📧 Sending booking confirmation emails...')
     console.log('📧 Student:', { name: studentName, email: studentEmail })
     console.log('📧 Tutor:', { name: tutorName, email: tutorEmail })
+    console.log('📧 FROM_EMAIL:', FROM_EMAIL)
+    console.log('📧 FROM_NAME:', FROM_NAME)
+    console.log('📧 RESEND_API_KEY configured:', !!process.env.RESEND_API_KEY)
 
     // Send confirmation email to student
     const studentEmailHtml = generateBookingConfirmationEmail({

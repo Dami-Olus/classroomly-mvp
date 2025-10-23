@@ -6,6 +6,6 @@ if (!process.env.RESEND_API_KEY) {
 
 export const resend = new Resend(process.env.RESEND_API_KEY || 'placeholder')
 
-export const FROM_EMAIL = process.env.FROM_EMAIL || 'olusakinadedamola@gmail.com'
+export const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev'
 export const FROM_NAME = 'Classroomly'
 
