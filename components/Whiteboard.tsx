@@ -18,8 +18,11 @@ export function Whiteboard({ roomId, isTutor, onSave, className = '' }: Whiteboa
   const [whiteboardUrl, setWhiteboardUrl] = useState('')
 
   useEffect(() => {
-    // Generate Excalidraw URL with room ID for collaboration
-    const url = `https://excalidraw.com?room=${encodeURIComponent(roomId)}`
+    // Generate Excalidraw URL with unique session ID for isolation
+    // Use roomId as the session identifier - each classroom gets its own whiteboard
+    // This ensures whiteboards are isolated per classroom session
+    const sessionId = `classroom-${roomId}`
+    const url = `https://excalidraw.com?room=${encodeURIComponent(sessionId)}`
     setWhiteboardUrl(url)
   }, [roomId])
 
