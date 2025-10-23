@@ -47,6 +47,13 @@ export default function OnboardingFlow({ role, onComplete, onDismiss }: Onboardi
 
   useEffect(() => {
     if (profile) {
+      // Check if onboarding was previously dismissed
+      const hasDismissedOnboarding = localStorage.getItem('onboarding-dismissed') === 'true'
+      if (hasDismissedOnboarding) {
+        setIsDismissed(true)
+        return
+      }
+      
       loadOnboardingProgress()
     }
   }, [profile])
