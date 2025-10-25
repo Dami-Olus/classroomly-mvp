@@ -8,6 +8,7 @@ import {
   Clock,
   BookOpen,
 } from 'lucide-react'
+import Changelog from '@/components/Changelog'
 
 export default function HomePage() {
   return (
@@ -153,6 +154,9 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+
+      {/* Changelog Section */}
+      <Changelog />
 
       {/* Footer */}
       <footer className="bg-white border-t border-secondary-200 py-8">
