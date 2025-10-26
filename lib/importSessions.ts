@@ -63,7 +63,7 @@ export function downloadTemplate() {
   const url = URL.createObjectURL(blob)
   
   link.setAttribute('href', url)
-  link.setAttribute('download', 'session_import_template.csv')
+  link.setAttribute('download', 'session_import_template_with_times.csv')
   link.style.visibility = 'hidden'
   
   document.body.appendChild(link)
@@ -180,9 +180,21 @@ export function validateImportData(rows: ImportRow[]): ValidationResult {
       errors.push(`Row ${rowNum}: At least one day is required`)
     }
 
-    // Validate time format
-    if (!row.time.match(timeRegex)) {
-      errors.push(`Row ${rowNum}: Invalid time format "${row.time}". Use HH:MM (e.g., 14:00, 09:30)`)
+    // Validate time format - support both single time and comma-separated times
+    const timeValues = row.time.split(',').map(t => t.trim())
+    const invalidTimes = timeValues.filter(time => !time.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/))
+    
+    if (invalidTimes.length > 0) {
+      errors.push(`Row ${rowNum}: Invalid time format(s): "${invalidTimes.join(', ')}". Use HH:MM format (e.g., 14:00, 09:30)`)
+    }
+    
+    if (timeValues.length === 0) {
+      errors.push(`Row ${rowNum}: At least one time is required`)
+    }
+    
+    // Validate time-day count matching
+    if (timeValues.length > 1 && timeValues.length !== daysList.length) {
+      errors.push(`Row ${rowNum}: Number of times (${timeValues.length}) must match number of days (${daysList.length}) when using multiple times`)
     }
 
     // Warning for missing email
