@@ -136,7 +136,16 @@ export class TimezoneConverter {
    * Check if two timezones are the same
    */
   static isSameTimezone(tz1: string, tz2: string): boolean {
-    return tz1 === tz2;
+    if (tz1 === tz2) return true;
+    
+    // Check if they have the same offset (e.g., UTC and ET during standard time)
+    try {
+      const offset1 = this.getTimezoneOffset('UTC', tz1);
+      const offset2 = this.getTimezoneOffset('UTC', tz2);
+      return offset1 === offset2;
+    } catch {
+      return false;
+    }
   }
 
   /**

@@ -1,5 +1,15 @@
 import { createClient } from '@/lib/supabase/client'
 
+/**
+ * Format date for database storage without timezone conversion
+ */
+function formatDateForDatabase(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export interface SessionData {
   booking_id: string
   session_number: number
@@ -49,7 +59,7 @@ export async function generateSessions(params: GenerateSessionsParams): Promise<
       sessions.push({
         booking_id: bookingId,
         session_number: sessionNumber,
-        scheduled_date: currentDate.toISOString().split('T')[0], // YYYY-MM-DD
+        scheduled_date: formatDateForDatabase(currentDate), // Use local date formatting
         scheduled_time: time,
         scheduled_day: dayName,
         duration: classSchedule.duration,

@@ -1,11 +1,23 @@
 import { createClient } from '@/lib/supabase/client'
 import { generateSessions, createSessions } from '@/lib/sessions'
 
+/**
+ * Format date for database storage without timezone conversion
+ */
+function formatDateForDatabase(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export interface ImportRow {
   studentName: string
   studentEmail: string
   days: string // Comma-separated: "Monday,Wednesday"
-  time: string // HH:MM format
+  time: string // HH:MM format or comma-separated times: "10:00,14:00"
+  // Alternative: dayTimePairs for more complex scheduling
+  dayTimePairs?: Array<{ day: string; time: string }>
 }
 
 export interface ValidationResult {
@@ -26,11 +38,11 @@ export interface ImportSummary {
  * Generate CSV template for session import
  */
 export function generateImportTemplate(): string {
-  const headers = ['Student Name', 'Student Email', 'Days (comma-separated)', 'Time (HH:MM)']
+  const headers = ['Student Name', 'Student Email', 'Days (comma-separated)', 'Times (comma-separated)']
   const exampleRows = [
-    ['John Doe', 'john@example.com', 'Monday,Wednesday', '14:00'],
-    ['Jane Smith', 'jane@example.com', 'Tuesday,Thursday', '16:00'],
-    ['Bob Johnson', 'bob@example.com', 'Friday', '10:00'],
+    ['John Doe', 'john@example.com', 'Monday,Wednesday', '10:00,14:00'],
+    ['Jane Smith', 'jane@example.com', 'Tuesday,Thursday', '09:00'],
+    ['Bob Johnson', 'bob@example.com', 'Monday,Wednesday,Friday', '10:00,14:00,16:00']
   ]
 
   const csvContent = [
@@ -87,11 +99,38 @@ export async function parseCSV(file: File): Promise<ImportRow[]> {
 
           const [name, email, days, time] = matches.map(m => m.replace(/^"|"$/g, '').trim())
 
+          // Parse day-time pairs if time contains multiple values
+          const timeValues = time.split(',').map(t => t.trim())
+          const dayValues = days.split(',').map(d => d.trim())
+          
+          let dayTimePairs: Array<{ day: string; time: string }> = []
+          
+          if (timeValues.length === dayValues.length && timeValues.length > 1) {
+            // Different times for different days
+            dayTimePairs = dayValues.map((day, i) => ({
+              day,
+              time: timeValues[i] || timeValues[0] // Fallback to first time
+            }))
+          } else if (timeValues.length === 1) {
+            // Same time for all days
+            dayTimePairs = dayValues.map(day => ({
+              day,
+              time: timeValues[0]
+            }))
+          } else {
+            // Fallback: use first time for all days
+            dayTimePairs = dayValues.map(day => ({
+              day,
+              time: timeValues[0]
+            }))
+          }
+
           return {
             studentName: name,
             studentEmail: email,
             days: days,
-            time: time
+            time: time,
+            dayTimePairs: dayTimePairs
           }
         })
 
@@ -288,12 +327,22 @@ export async function importSessions(
         }
       }
 
-      // Parse days and create scheduled slots
-      const daysList = row.days.split(',').map(d => d.trim())
-      const scheduledSlots = daysList.map(day => ({
-        day,
-        time: row.time
-      }))
+      // Parse days and create scheduled slots using dayTimePairs
+      const scheduledSlots = row.dayTimePairs?.map(pair => ({
+        day: pair.day,
+        time: pair.time
+      })) || []
+
+      // Fallback to old format if dayTimePairs not available
+      if (scheduledSlots.length === 0) {
+        const daysList = row.days.split(',').map(d => d.trim())
+        const timeValues = row.time.split(',').map(t => t.trim())
+        
+        scheduledSlots.push(...daysList.map((day, index) => ({
+          day,
+          time: timeValues[index] || timeValues[0] || '10:00'
+        })))
+      }
 
       // Validate scheduled slots
       if (!scheduledSlots || scheduledSlots.length === 0) {
@@ -311,8 +360,8 @@ export async function importSessions(
           student_email: row.studentEmail || null,
           scheduled_slots: scheduledSlots,
           total_sessions: totalSessionsPerStudent,
-          sessions_per_week: daysList.length,
-          start_date: startDate.toISOString().split('T')[0],
+          sessions_per_week: scheduledSlots.length,
+          start_date: formatDateForDatabase(startDate),
           status: 'confirmed'
         })
         .select()
@@ -325,10 +374,10 @@ export async function importSessions(
 
       bookingsCreated++
 
-      // Generate sessions for this booking
+      // Generate sessions for this booking using individual day-time pairs
       const classSchedule = {
-        days: daysList,
-        times: daysList.map(() => row.time), // Same time for all days
+        days: scheduledSlots.map(slot => slot.day),
+        times: scheduledSlots.map(slot => slot.time),
         duration: 60 // Default duration, could be from class settings
       }
 
