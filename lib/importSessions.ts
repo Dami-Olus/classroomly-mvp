@@ -99,31 +99,21 @@ export async function parseCSV(file: File): Promise<ImportRow[]> {
 
           const [name, email, days, time] = matches.map(m => m.replace(/^"|"$/g, '').trim())
 
-          // Parse day-time pairs if time contains multiple values
+          // Parse day-time pairs - times apply to ALL days, not distributed
           const timeValues = time.split(',').map(t => t.trim())
           const dayValues = days.split(',').map(d => d.trim())
           
           let dayTimePairs: Array<{ day: string; time: string }> = []
           
-          if (timeValues.length === dayValues.length && timeValues.length > 1) {
-            // Different times for different days
-            dayTimePairs = dayValues.map((day, i) => ({
-              day,
-              time: timeValues[i] || timeValues[0] // Fallback to first time
-            }))
-          } else if (timeValues.length === 1) {
-            // Same time for all days
-            dayTimePairs = dayValues.map(day => ({
-              day,
-              time: timeValues[0]
-            }))
-          } else {
-            // Fallback: use first time for all days
-            dayTimePairs = dayValues.map(day => ({
-              day,
-              time: timeValues[0]
-            }))
-          }
+          // Apply ALL times to EACH day
+          dayValues.forEach(day => {
+            timeValues.forEach(timeValue => {
+              dayTimePairs.push({
+                day,
+                time: timeValue
+              })
+            })
+          })
 
           return {
             studentName: name,
@@ -190,11 +180,6 @@ export function validateImportData(rows: ImportRow[]): ValidationResult {
     
     if (timeValues.length === 0) {
       errors.push(`Row ${rowNum}: At least one time is required`)
-    }
-    
-    // Validate time-day count matching
-    if (timeValues.length > 1 && timeValues.length !== daysList.length) {
-      errors.push(`Row ${rowNum}: Number of times (${timeValues.length}) must match number of days (${daysList.length}) when using multiple times`)
     }
 
     // Warning for missing email
