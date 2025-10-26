@@ -391,7 +391,11 @@ export default function ImportSessionsModal({
                           <td className="px-3 py-2 text-gray-600">{row.studentEmail || 'No email'}</td>
                           <td className="px-3 py-2">
                             <div className="flex flex-wrap gap-1">
-                              {row.days.split(',').map((day, j) => (
+                              {row.dayTimePairs?.map((pair, j) => (
+                                <span key={j} className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs">
+                                  {pair.day} {pair.time}
+                                </span>
+                              )) || row.days.split(',').map((day, j) => (
                                 <span key={j} className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs">
                                   {day.trim()} {row.time}
                                 </span>
