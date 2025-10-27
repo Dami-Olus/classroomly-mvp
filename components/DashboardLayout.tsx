@@ -107,33 +107,33 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-secondary-50">
       {/* Top Navbar */}
       <nav className="bg-white border-b border-secondary-200 sticky top-0 z-50">
-        <div className="container-custom px-4">
+        <div className="container-custom">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* Mobile menu button */}
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+                className="md:hidden p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
                 aria-label="Toggle menu"
               >
                 <Menu className="w-6 h-6" />
               </button>
               
-              <Link href="/" className="flex items-center space-x-2">
-                <BookOpen className="w-6 h-6 md:w-8 md:h-8 text-primary-600" />
-                <span className="text-xl md:text-2xl font-bold text-primary-600">
+              <Link href="/" className="flex items-center space-x-2 min-w-0">
+                <BookOpen className="w-6 h-6 md:w-8 md:h-8 text-primary-600 flex-shrink-0" />
+                <span className="text-xl md:text-2xl font-bold text-primary-600 truncate">
                   Classroomly
                 </span>
               </Link>
             </div>
 
-            <div className="flex items-center space-x-2 md:space-x-4">
-              <span className="text-xs md:text-sm text-secondary-600 hidden sm:inline truncate max-w-[120px] md:max-w-none">
+            <div className="flex items-center space-x-2 md:space-x-4 flex-shrink-0">
+              <span className="text-xs md:text-sm text-secondary-600 hidden sm:inline truncate max-w-[100px] md:max-w-none">
                 {profile?.first_name} {profile?.last_name}
               </span>
               <button 
                 onClick={signOut} 
-                className="btn-secondary text-xs md:text-sm flex items-center gap-1 md:gap-2"
+                className="btn-secondary text-xs md:text-sm flex items-center gap-1 md:gap-2 whitespace-nowrap"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden md:inline">Logout</span>
@@ -215,9 +215,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <main className={cn(
           "flex-1 transition-all duration-300",
           "p-4 md:p-6 lg:p-8",
-          "w-full"
+          "w-full",
+          "min-w-0" // Prevent overflow
         )}>
-          {children}
+          <div className="max-w-full overflow-x-hidden">
+            {children}
+          </div>
         </main>
       </div>
     </div>
