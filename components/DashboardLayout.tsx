@@ -206,12 +206,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className={cn(
           "fixed inset-0 bg-black transition-opacity duration-300 z-40 lg:hidden",
           isMobileMenuOpen ? "opacity-50 visible" : "opacity-0 invisible"
-        )}>
-          <aside className={cn(
-            "bg-white h-full w-64 shadow-2xl transition-transform duration-300",
-            "flex flex-col",
-            isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-          )}>
+        )} onClick={() => setIsMobileMenuOpen(false)}>
+          <aside 
+            className={cn(
+              "bg-white h-full w-64 shadow-2xl transition-transform duration-300",
+              "flex flex-col z-50 relative",
+              isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            )}
+            style={{ backgroundColor: '#ffffff' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between p-4 border-b">
               <span className="font-semibold text-lg">Menu</span>
               <button
