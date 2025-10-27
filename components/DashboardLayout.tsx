@@ -202,20 +202,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </nav>
         </aside>
 
-        {/* Mobile Menu Overlay */}
-        <div className={cn(
-          "fixed inset-0 bg-black transition-opacity duration-300 z-40 lg:hidden",
-          isMobileMenuOpen ? "opacity-50 visible" : "opacity-0 invisible"
-        )} onClick={() => setIsMobileMenuOpen(false)}>
-          <aside 
-            className={cn(
-              "bg-white h-full w-64 shadow-2xl transition-transform duration-300",
-              "flex flex-col z-50 relative",
-              isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-            )}
-            style={{ backgroundColor: '#ffffff' }}
-            onClick={(e) => e.stopPropagation()}
-          >
+        {/* Mobile Menu Overlay - Backdrop */}
+        {isMobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300 z-40 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* Mobile Sidebar */}
+        <aside 
+          className={cn(
+            "fixed bg-white h-screen w-64 shadow-2xl transition-transform duration-300 z-50 lg:hidden",
+            "flex flex-col top-0 left-0",
+            isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
             <div className="flex items-center justify-between p-4 border-b">
               <span className="font-semibold text-lg">Menu</span>
               <button
@@ -251,7 +253,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               })}
             </nav>
           </aside>
-        </div>
 
         {/* Main Content */}
         <main className={cn(
