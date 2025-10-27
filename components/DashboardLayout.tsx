@@ -150,15 +150,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       <div className="flex relative">
         {/* Desktop Sidebar */}
-        <aside className={cn(
-          "bg-white border-r border-secondary-200 transition-all duration-300 ease-in-out",
-          "hidden lg:block h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)]",
-          isSidebarCollapsed ? "w-16" : "w-64"
-        )}>
+        <aside 
+          className={cn(
+            "bg-white border-r border-secondary-200 transition-all duration-300 ease-in-out group",
+            "hidden lg:block h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)]",
+            isSidebarCollapsed ? "w-16" : "w-64"
+          )}
+          onMouseEnter={() => isSidebarCollapsed && setIsSidebarCollapsed(false)}
+          onMouseLeave={() => !isSidebarCollapsed && setIsSidebarCollapsed(true)}
+        >
           {/* Desktop collapse toggle button */}
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="absolute -right-3 top-4 z-50 bg-white border border-gray-300 rounded-full p-1 shadow-md hover:bg-gray-50 transition-transform"
+            className="absolute -right-3 top-4 z-50 bg-white border border-gray-300 rounded-full p-1 shadow-md hover:bg-gray-50 transition-transform opacity-0 group-hover:opacity-100"
             aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <ChevronLeft className={cn(
@@ -177,7 +181,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   href={link.href}
                   title={isSidebarCollapsed ? link.label : undefined}
                   className={cn(
-                    'flex items-center rounded-lg transition-all',
+                    'flex items-center rounded-lg transition-all relative',
                     isSidebarCollapsed ? 'justify-center px-3' : 'space-x-3 px-4',
                     'py-2.5 sm:py-3',
                     isActive
@@ -187,6 +191,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
                   {!isSidebarCollapsed && <span className="truncate text-sm">{link.label}</span>}
+                  {isSidebarCollapsed && (
+                    <span className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">
+                      {link.label}
+                    </span>
+                  )}
                 </Link>
               )
             })}

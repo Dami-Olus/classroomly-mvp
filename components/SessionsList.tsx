@@ -217,12 +217,12 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
             {pastSessions.slice(0, 5).map((session) => (
               <div
                 key={session.id}
-                className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                className="border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50"
               >
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-gray-700">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="font-medium text-sm sm:text-base text-gray-700">
                         Session {session.session_number}
                       </span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getSessionStatusColor(session.status)}`}>
@@ -230,14 +230,14 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
                       </span>
                     </div>
                     
-                    <div className="text-sm text-gray-600">
+                    <div className="text-xs sm:text-sm text-gray-600">
                       {formatSessionDateTime(session.scheduled_date, session.scheduled_time, session.scheduled_day)}
                     </div>
                   </div>
 
                   <Link
                     href={`/${role}/bookings/${bookingId}/sessions/${session.id}`}
-                    className="btn-secondary text-sm flex items-center gap-2"
+                    className="btn-secondary text-xs sm:text-sm flex items-center justify-center gap-2 w-full sm:w-auto"
                   >
                     <FileText className="w-4 h-4" />
                     View
@@ -261,7 +261,7 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
       )}
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <div className="card text-center">
           <p className="text-2xl font-bold text-gray-900">{sessions.length}</p>
           <p className="text-sm text-gray-600">Total Sessions</p>
