@@ -102,16 +102,16 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
               upcomingSessions.map((session) => (
                 <div
                   key={session.id}
-                  className={`border rounded-lg p-4 transition-all ${
+                  className={`border rounded-lg p-3 sm:p-4 transition-all ${
                     isSessionToday(session.scheduled_date)
                       ? 'border-primary-500 bg-primary-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold text-gray-900">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="font-semibold text-sm sm:text-base text-gray-900">
                           Session {session.session_number}
                         </span>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getSessionStatusColor(session.status)}`}>
@@ -124,7 +124,7 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
                           <span>{formatSessionDateTime(session.scheduled_date, session.scheduled_time, session.scheduled_day)}</span>
@@ -136,14 +136,14 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-shrink-0 w-full sm:w-auto">
                       {/* Tutor Actions */}
                       {role === 'tutor' && (
                         <>
                           {canStartSession(session) && !session.classroom_id && (
                             <button
                               onClick={() => onStartSession?.(session.id)}
-                              className="btn-primary text-sm flex items-center gap-2"
+                              className="btn-primary text-xs sm:text-sm flex items-center justify-center gap-2"
                             >
                               <Video className="w-4 h-4" />
                               Start Session
@@ -154,7 +154,7 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
                             <Link
                               href={`/classroom/${session.classroom.room_url}`}
                               target="_blank"
-                              className="btn-primary text-sm flex items-center gap-2"
+                              className="btn-primary text-xs sm:text-sm flex items-center justify-center gap-2"
                             >
                               <Video className="w-4 h-4" />
                               Enter Classroom
@@ -163,7 +163,7 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
                           
                           <Link
                             href={`/tutor/bookings/${bookingId}/sessions/${session.id}`}
-                            className="btn-secondary text-sm flex items-center gap-2"
+                            className="btn-secondary text-xs sm:text-sm flex items-center justify-center gap-2"
                           >
                             <FileText className="w-4 h-4" />
                             Details
@@ -178,7 +178,7 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
                             <Link
                               href={`/classroom/${session.classroom?.room_url}`}
                               target="_blank"
-                              className="btn-primary text-sm flex items-center gap-2"
+                              className="btn-primary text-xs sm:text-sm flex items-center justify-center gap-2"
                             >
                               <Video className="w-4 h-4" />
                               Join Classroom
@@ -187,7 +187,7 @@ export default function SessionsList({ sessions, bookingId, role, onStartSession
                           
                           <Link
                             href={`/student/bookings/${bookingId}/sessions/${session.id}`}
-                            className="btn-secondary text-sm flex items-center gap-2"
+                            className="btn-secondary text-xs sm:text-sm flex items-center justify-center gap-2"
                           >
                             <FileText className="w-4 h-4" />
                             Details
