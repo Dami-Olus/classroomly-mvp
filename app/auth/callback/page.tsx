@@ -58,7 +58,9 @@ function AuthCallbackContent() {
             setTimeout(() => {
               // Get user metadata to determine role
               const userRole = data.session?.user?.user_metadata?.role
-              if (userRole === 'tutor') {
+              if (userRole === 'admin') {
+                router.push('/admin/dashboard')
+              } else if (userRole === 'tutor') {
                 router.push('/tutor/dashboard')
               } else {
                 router.push('/student/dashboard')

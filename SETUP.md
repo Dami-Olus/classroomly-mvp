@@ -47,39 +47,37 @@ npm install
 In the SQL Editor, run:
 
 ```sql
--- Allow authenticated users to upload their own avatars
-CREATE POLICY "Users can upload own avatar"
-ON storage.objects FOR INSERT
+-- Enable RLS (if not already enabled)
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- Users can upload avatars (filenames include user ID)
+CREATE POLICY "Users can upload avatars" 
+ON storage.objects 
+FOR INSERT 
 TO authenticated
 WITH CHECK (
   bucket_id = 'avatars' AND
-  auth.uid()::text = (storage.foldername(name))[1]
+  name LIKE auth.uid()::text || '-%'
 );
 
--- Allow public read access to avatars
-CREATE POLICY "Avatars are publicly accessible"
-ON storage.objects FOR SELECT
-TO public
+-- Anyone can view avatars (public bucket)
+CREATE POLICY "Anyone can view avatars" 
+ON storage.objects 
+FOR SELECT 
 USING (bucket_id = 'avatars');
 
--- Allow users to update their own avatars
-CREATE POLICY "Users can update own avatar"
-ON storage.objects FOR UPDATE
+-- Users can delete their own avatars
+CREATE POLICY "Users can delete own avatars" 
+ON storage.objects 
+FOR DELETE 
 TO authenticated
 USING (
   bucket_id = 'avatars' AND
-  auth.uid()::text = (storage.foldername(name))[1]
-);
-
--- Allow users to delete their own avatars
-CREATE POLICY "Users can delete own avatar"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (
-  bucket_id = 'avatars' AND
-  auth.uid()::text = (storage.foldername(name))[1]
+  name LIKE auth.uid()::text || '-%'
 );
 ```
+
+**Note:** Files are stored as `avatars/{user-id}-{timestamp}-{random}.{ext}`, so the policy checks that the filename starts with the user's ID.
 
 ## Step 3: Configure Environment Variables
 

@@ -26,7 +26,9 @@ export default function LoginPage() {
       // Get user profile to determine role
       const profile = data.user.user_metadata
 
-      if (profile?.role === 'tutor') {
+      if (profile?.role === 'admin') {
+        router.push('/admin/dashboard')
+      } else if (profile?.role === 'tutor') {
         router.push('/tutor/dashboard')
       } else {
         router.push('/student/dashboard')

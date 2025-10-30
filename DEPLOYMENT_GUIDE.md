@@ -76,23 +76,94 @@ Deploy to Vercel (frontend/backend) + Supabase (database/storage/auth)
 
 ---
 
-### **Step 3: Create Storage Bucket**
+### **Step 3: Create Storage Buckets**
 
 1. **Go to Storage**
    - https://supabase.com/dashboard/project/[your-project]/storage/buckets
 
-2. **Create "materials" bucket:**
+2. **Create "avatars" bucket (for profile pictures):**
+   - Click "New bucket"
+   - Name: `avatars`
+   - Public: ✅ **CHECK** (public, so profile images can be displayed)
+   - File size limit: `5242880` (5MB)
+   - Allowed MIME types: `image/*`
+   - Click "Create bucket"
+
+3. **Create "materials" bucket (for session files):**
    - Click "New bucket"
    - Name: `materials`
    - Public: ❌ **UNCHECK** (private)
    - File size limit: `10485760` (10MB)
    - Click "Create bucket"
 
-3. **Add Storage Policies (SQL Editor):**
+4. **Add Storage Policies (SQL Editor):**
+   
+   **For avatars bucket:**
    ```sql
-   -- Enable RLS
+   -- Enable RLS (if not already enabled)
    ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
+   -- Drop existing policies if they exist
+   DROP POLICY IF EXISTS "Users can upload avatars" ON storage.objects;
+   DROP POLICY IF EXISTS "Anyone can view avatars" ON storage.objects;
+   DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects;
+
+   -- Users can upload avatars (check filename starts with user ID)
+   -- The 'name' field contains the full path: 'avatars/{user-id}-timestamp-random.ext'
+   -- So we extract the filename and check it starts with the user ID
+   CREATE POLICY "Users can upload avatars" 
+   ON storage.objects 
+   FOR INSERT 
+   TO authenticated
+   WITH CHECK (
+     bucket_id = 'avatars' AND
+     (string_to_array(name, '/'))[2] LIKE auth.uid()::text || '-%'
+   );
+
+   -- Anyone can view avatars (public bucket)
+   CREATE POLICY "Anyone can view avatars" 
+   ON storage.objects 
+   FOR SELECT 
+   USING (bucket_id = 'avatars');
+
+   -- Users can delete their own avatars
+   CREATE POLICY "Users can delete own avatars" 
+   ON storage.objects 
+   FOR DELETE 
+   TO authenticated
+   USING (
+     bucket_id = 'avatars' AND
+     owner = auth.uid()
+   );
+   ```
+
+   **⚠️ If you get RLS errors, use this SIMPLER version:**
+   ```sql
+   -- Simplified policies (for testing/quick setup)
+   DROP POLICY IF EXISTS "Users can upload avatars" ON storage.objects;
+   DROP POLICY IF EXISTS "Anyone can view avatars" ON storage.objects;
+   DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects;
+
+   CREATE POLICY "Users can upload avatars" 
+   ON storage.objects 
+   FOR INSERT 
+   TO authenticated
+   WITH CHECK (bucket_id = 'avatars');
+
+   CREATE POLICY "Anyone can view avatars" 
+   ON storage.objects 
+   FOR SELECT 
+   USING (bucket_id = 'avatars');
+
+   CREATE POLICY "Users can delete own avatars" 
+   ON storage.objects 
+   FOR DELETE 
+   TO authenticated
+   USING (bucket_id = 'avatars' AND owner = auth.uid());
+   ```
+
+   **For materials bucket:**
+   ```sql
    -- Upload policy
    CREATE POLICY "Participants can upload" 
    ON storage.objects 

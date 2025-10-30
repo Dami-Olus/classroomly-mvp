@@ -23,7 +23,9 @@ export default function ProtectedRoute({
         router.push('/login')
       } else if (requiredRole && profile?.role !== requiredRole) {
         // Redirect to appropriate dashboard based on user role
-        if (profile?.role === 'tutor') {
+        if (profile?.role === 'admin') {
+          router.push('/admin/dashboard')
+        } else if (profile?.role === 'tutor') {
           router.push('/tutor/dashboard')
         } else {
           router.push('/student/dashboard')

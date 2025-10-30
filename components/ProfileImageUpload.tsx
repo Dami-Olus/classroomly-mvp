@@ -21,17 +21,61 @@ export default function ProfileImageUpload() {
         return
       }
 
+      if (!profile?.id) {
+        toast.error('Please refresh the page and try again')
+        return
+      }
+
       const file = e.target.files[0]
+      
+      // Validate file size (5MB max)
+      const maxSize = 5 * 1024 * 1024
+      if (file.size > maxSize) {
+        toast.error('Image size must be less than 5MB')
+        return
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload an image file')
+        return
+      }
+
       const fileExt = file.name.split('.').pop()
-      const fileName = `${profile?.id}-${Math.random()}.${fileExt}`
+      const fileName = `${profile.id}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
       const filePath = `avatars/${fileName}`
+
+      // Check if bucket exists
+      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets()
+      if (bucketError) throw bucketError
+
+      const avatarsBucket = buckets?.find(b => b.name === 'avatars')
+      if (!avatarsBucket) {
+        toast.error(
+          'Storage bucket not configured. Please contact support or check deployment guide.',
+          { duration: 6000 }
+        )
+        console.error('avatars bucket not found. Available buckets:', buckets?.map(b => b.name))
+        return
+      }
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, { upsert: true })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        if (uploadError.message?.includes('bucket') || uploadError.message?.includes('Bucket')) {
+          toast.error(
+            'Storage bucket not found. Please create the "avatars" bucket in Supabase Storage.',
+            { duration: 6000 }
+          )
+        } else {
+          throw uploadError
+        }
+        return
+      }
 
       // Get public URL
       const {
@@ -40,6 +84,7 @@ export default function ProfileImageUpload() {
 
       // Update profile
       await updateProfile({ profile_image: publicUrl })
+      toast.success('Profile picture updated successfully')
     } catch (error: any) {
       console.error('Error uploading file:', error)
       toast.error(error.message || 'Failed to upload image')

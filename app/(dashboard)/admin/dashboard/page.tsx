@@ -14,7 +14,10 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-  Calendar
+  Calendar,
+  UserCheck,
+  Mail,
+  Search
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -40,6 +43,24 @@ interface RecentActivity {
   user?: string
 }
 
+interface UserMetrics {
+  id: string
+  name: string
+  email: string
+  role: string
+  signupDate: string
+  lastActivity?: string
+  // Tutor-specific
+  classesCreated?: number
+  bookingsReceived?: number
+  studentsCount?: number
+  completedSessions?: number
+  // Student-specific
+  bookingsMade?: number
+  classesEnrolled?: number
+  sessionsCompleted?: number
+}
+
 export default function AdminDashboard() {
   const { profile } = useAuth()
   const supabase = createClient()
@@ -59,6 +80,10 @@ export default function AdminDashboard() {
   })
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview')
+  const [users, setUsers] = useState<UserMetrics[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -160,6 +185,150 @@ export default function AdminDashboard() {
       setLoading(false)
     }
   }
+
+  const loadUserMetrics = async () => {
+    setUsersLoading(true)
+    try {
+      // Get all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, role, created_at')
+        .order('created_at', { ascending: false })
+
+      if (profilesError) throw profilesError
+
+      // Get metrics for each user
+      const userMetricsPromises = (profiles || []).map(async (profile: any) => {
+        const userId = profile.id
+        const userName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email
+        const metrics: UserMetrics = {
+          id: userId,
+          name: userName,
+          email: profile.email,
+          role: profile.role,
+          signupDate: profile.created_at,
+        }
+
+        if (profile.role === 'tutor') {
+          // Get tutor record
+          const { data: tutor } = await supabase
+            .from('tutors')
+            .select('id')
+            .eq('user_id', userId)
+            .single()
+
+          if (tutor) {
+            // Count classes
+            const { count: classesCount } = await supabase
+              .from('classes')
+              .select('*', { count: 'exact', head: true })
+              .eq('tutor_id', tutor.id)
+            
+            metrics.classesCreated = classesCount || 0
+
+            // Get bookings for tutor's classes
+            const { data: classes } = await supabase
+              .from('classes')
+              .select('id')
+              .eq('tutor_id', tutor.id)
+            
+            if (classes && classes.length > 0) {
+              const classIds = classes.map(c => c.id)
+              const { data: bookings } = await supabase
+                .from('bookings')
+                .select('id, completed_sessions, student_id')
+                .in('class_id', classIds)
+              
+              metrics.bookingsReceived = bookings?.length || 0
+              metrics.completedSessions = bookings?.reduce((sum: number, b: any) => sum + (b.completed_sessions || 0), 0) || 0
+              
+              // Count unique students
+              const studentIds = new Set(bookings?.map((b: any) => b.student_id).filter(Boolean) || [])
+              metrics.studentsCount = studentIds.size
+            }
+          }
+        } else if (profile.role === 'student') {
+          // Count bookings
+          const { data: bookings } = await supabase
+            .from('bookings')
+            .select('id, completed_sessions, class_id')
+            .eq('student_id', userId)
+          
+          metrics.bookingsMade = bookings?.length || 0
+          metrics.sessionsCompleted = bookings?.reduce((sum: number, b: any) => sum + (b.completed_sessions || 0), 0) || 0
+          
+          // Count unique classes
+          if (bookings && bookings.length > 0) {
+            const classIds = new Set(bookings.map((b: any) => b.class_id).filter(Boolean))
+            metrics.classesEnrolled = classIds.size
+          }
+        }
+
+        // Get last activity (most recent booking related to this user)
+        let lastActivity = profile.created_at // Default to signup date
+
+        if (profile.role === 'student') {
+          // For students, get most recent booking
+          const { data: lastBookingData } = await supabase
+            .from('bookings')
+            .select('created_at')
+            .eq('student_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+
+          if (lastBookingData && lastBookingData.length > 0) {
+            lastActivity = lastBookingData[0].created_at
+          }
+        } else if (profile.role === 'tutor') {
+          // For tutors, get most recent booking for their classes
+          const { data: tutor } = await supabase
+            .from('tutors')
+            .select('id')
+            .eq('user_id', userId)
+            .single()
+
+          if (tutor) {
+            const { data: classes } = await supabase
+              .from('classes')
+              .select('id')
+              .eq('tutor_id', tutor.id)
+
+            if (classes && classes.length > 0) {
+              const classIds = classes.map(c => c.id)
+              const { data: lastBookingData } = await supabase
+                .from('bookings')
+                .select('created_at')
+                .in('class_id', classIds)
+                .order('created_at', { ascending: false })
+                .limit(1)
+
+              if (lastBookingData && lastBookingData.length > 0) {
+                lastActivity = lastBookingData[0].created_at
+              }
+            }
+          }
+        }
+
+        metrics.lastActivity = lastActivity
+
+        return metrics
+      })
+
+      const userMetrics = await Promise.all(userMetricsPromises)
+      setUsers(userMetrics)
+    } catch (error) {
+      console.error('Error loading user metrics:', error)
+      toast.error('Failed to load user metrics')
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'users' && profile?.role === 'admin') {
+      loadUserMetrics()
+    }
+  }, [activeTab, profile])
 
   const loadRecentActivity = async () => {
     try {
@@ -271,6 +440,35 @@ export default function AdminDashboard() {
             </p>
           </div>
 
+          {/* Tabs */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`${
+                  activeTab === 'overview'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`${
+                  activeTab === 'users'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+              >
+                User Management
+              </button>
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'overview' ? (
+            <>
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="card">
@@ -532,6 +730,157 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
+            </>
+          ) : (
+            <>
+              {/* User Management */}
+              <div className="mb-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="Search users by name or email..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="input pl-10 w-full"
+                    />
+                  </div>
+                  <button
+                    onClick={loadUserMetrics}
+                    disabled={usersLoading}
+                    className="btn-secondary"
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                {usersLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading user metrics...</p>
+                  </div>
+                ) : (
+                  <div className="card overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              User
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Role
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Metrics
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Signup Date
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Last Activity
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {users
+                            .filter(user => 
+                              user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              user.email.toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+                            .map((user) => (
+                              <tr key={user.id} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                                      <UserCheck className="w-5 h-5 text-primary-600" />
+                                    </div>
+                                    <div className="ml-4">
+                                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                                      <div className="text-sm text-gray-500 flex items-center gap-1">
+                                        <Mail className="w-3 h-3" />
+                                        {user.email}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    user.role === 'tutor' ? 'bg-blue-100 text-blue-800' :
+                                    user.role === 'student' ? 'bg-green-100 text-green-800' :
+                                    'bg-purple-100 text-purple-800'
+                                  }`}>
+                                    {user.role}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="text-sm text-gray-900">
+                                    {user.role === 'tutor' ? (
+                                      <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                          <BookOpen className="w-4 h-4 text-gray-400" />
+                                          <span>{user.classesCreated || 0} classes</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <Users className="w-4 h-4 text-gray-400" />
+                                          <span>{user.studentsCount || 0} students</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="w-4 h-4 text-gray-400" />
+                                          <span>{user.bookingsReceived || 0} bookings</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <CheckCircle className="w-4 h-4 text-gray-400" />
+                                          <span>{user.completedSessions || 0} sessions</span>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="w-4 h-4 text-gray-400" />
+                                          <span>{user.bookingsMade || 0} bookings</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <BookOpen className="w-4 h-4 text-gray-400" />
+                                          <span>{user.classesEnrolled || 0} classes</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <CheckCircle className="w-4 h-4 text-gray-400" />
+                                          <span>{user.sessionsCompleted || 0} sessions</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {new Date(user.signupDate).toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {user.lastActivity 
+                                    ? new Date(user.lastActivity).toLocaleDateString()
+                                    : 'Never'
+                                  }
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                      {users.filter(user => 
+                        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).length === 0 && (
+                        <div className="text-center py-12 text-gray-500">
+                          <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                          <p>No users found</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>
